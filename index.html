@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>She Is Studio</title>
+<meta name="description" content="Cria posts, carrosséis e stories com templates prontos, no estilo dos feeds que adoras.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23161210'/%3E%3Cpath d='M16 5c0 7 4 11 11 11-7 0-11 4-11 11 0-7-4-11-11-11 7 0 11-4 11-11z' fill='%23F4B6D2'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand">she is <i>studio</i></div>
+    <select id="fmt" aria-label="Formato"></select>
+    <div class="sp"></div>
+    <button class="ic" id="undo" title="Anular (Ctrl+Z)" aria-label="Anular">↶</button>
+    <button class="ic" id="redo" title="Refazer" aria-label="Refazer">↷</button>
+    <div class="menu">
+      <button class="btn pri" id="exp">Descarregar</button>
+      <div class="pop" id="expPop" hidden>
+        <button data-exp="one">Esta página · PNG</button>
+        <button data-exp="all">Todas as páginas · ZIP</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="rail" id="rail">
+    <button data-tab="tpl" class="on"><span>▦</span>Templates</button>
+    <button data-tab="el"><span>✦</span>Elementos</button>
+    <button data-tab="bg"><span>◐</span>Fundo</button>
+    <button data-tab="edit" class="only-m"><span>✎</span>Editar</button>
+  </nav>
+
+  <section class="panel" data-panel="tpl">
+    <h2>Templates</h2>
+    <div class="cats" id="cats"></div>
+    <div class="grid" id="tplGrid"></div>
+  </section>
+
+  <section class="panel" data-panel="el" hidden>
+    <h2>Elementos</h2>
+    <h3>Texto</h3>
+    <div class="row">
+      <button class="chipb" data-add="title">Título</button>
+      <button class="chipb" data-add="body">Texto</button>
+      <button class="chipb" data-add="pill">Etiqueta</button>
+      <button class="chipb" data-add="quote">Citação</button>
+    </div>
+    <h3>Formas</h3>
+    <div class="row" id="shapes"></div>
+    <h3>Autocolantes</h3>
+    <div class="row" id="stickers"></div>
+    <h3>Emojis</h3>
+    <div class="row emo" id="emojis"></div>
+    <h3>Fotos</h3>
+    <div class="row"><button class="chipb" data-add="photo">+ Moldura de foto</button><button class="chipb" data-add="arch">+ Arco</button><button class="chipb" data-add="circle">+ Círculo</button></div>
+  </section>
+
+  <section class="panel" data-panel="bg" hidden>
+    <h2>Fundo</h2>
+    <h3>Cores</h3>
+    <div class="row" id="swatches"></div>
+    <label class="fld"><span>Cor personalizada</span><input type="color" id="bgColor" value="#F4EEE3"></label>
+    <h3>Ambientes</h3>
+    <div class="row" id="moods"></div>
+    <h3>Foto</h3>
+    <div class="row"><button class="chipb" id="bgPhoto">+ Carregar foto de fundo</button><button class="chipb" id="bgClear">Remover foto</button></div>
+    <label class="fld"><span>Desfocar</span><input type="range" id="bgBlur" min="0" max="10" step=".5" value="0"></label>
+    <label class="fld"><span>Escurecer</span><input type="range" id="bgTint" min="0" max=".8" step=".02" value="0"></label>
+    <p class="hint">Dica: troca o fundo de um template pela tua foto e escurece um pouco para o texto ler melhor.</p>
+  </section>
+
+  <section class="panel inspector" id="inspector" data-panel="edit" hidden></section>
+
+  <main class="stage" id="stage">
+    <div class="board" id="board">
+      <canvas id="cv"></canvas>
+      <div class="ov" id="ov"></div>
+    </div>
+    <div class="pages" id="pages"></div>
+  </main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<input type="file" id="file" accept="image/*" hidden>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
