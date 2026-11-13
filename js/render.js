@@ -7,6 +7,7 @@ export const FORMATS = {
   post:   { w: 1080, h: 1350, n: "Post 4:5" },
   story:  { w: 1080, h: 1920, n: "Story / Reel 9:16" },
   square: { w: 1080, h: 1080, n: "Quadrado 1:1" },
+  pin:    { w: 1080, h: 1620, n: "Pinterest 2:3" },
 };
 
 export const FONTS = ["Plus Jakarta Sans", "Instrument Serif", "Playfair Display", "Inter", "Caveat"];
@@ -175,16 +176,12 @@ function rr(c, x, y, w, h, r) {
 
 /** Cauda dos balões estilo iMessage. */
 function tail(c, x, y, w, h, r, right) {
+  const s = right ? 1 : -1, ax = right ? x + w : x, by = y + h;
   c.beginPath();
-  if (right) {
-    c.moveTo(x + w - r * .9, y + h - 2);
-    c.bezierCurveTo(x + w - 6, y + h + 2, x + w + 8, y + h + 2, x + w + 16, y + h + 14);
-    c.bezierCurveTo(x + w + 2, y + h + 14, x + w - 22, y + h + 8, x + w - r * 1.6, y + h - 14);
-  } else {
-    c.moveTo(x + r * .9, y + h - 2);
-    c.bezierCurveTo(x + 6, y + h + 2, x - 8, y + h + 2, x - 16, y + h + 14);
-    c.bezierCurveTo(x - 2, y + h + 14, x + 22, y + h + 8, x + r * 1.6, y + h - 14);
-  }
+  c.moveTo(ax - s * 44, by - 6);
+  c.bezierCurveTo(ax - s * 30, by + 1, ax - s * 8, by + 3, ax + s * 16, by + 5);
+  c.bezierCurveTo(ax + s * 2, by - 6, ax - s * 1, by - 26, ax - s * 8, by - 48);
+  c.closePath();
   c.fill();
 }
 

@@ -2,6 +2,8 @@
 import { FORMATS, FONTS, renderPage, hitTest, getBox, preloadDoc, onImageLoad } from "./render.js";
 import { PACKS, CATEGORIES } from "./templates.js";
 import { zip } from "./zip.js";
+import { pdf } from "./pdf.js";
+import * as store from "./store.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -13,7 +15,12 @@ const mobile = () => matchMedia("(max-width:899px)").matches;
 let doc = { fmt: "post", pages: [] };
 let cur = 0, selId = null, scale = 1;
 let HIST = [], REDO = [], last = "";
-const KEY = "sheis-studio2";
+let pristine = true, projId = null, projName = "Design sem título", projCreated = 0;
+const KEY = "sheis-studio2", LAST = "sheis-studio2-last", KITKEY = "sheis-studio2-kit";
+const newId = () => "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+const DEFAULT_KIT = { handle: "@o.teu.perfil", colors: ["#F4EEE3", "#161210", "#F4B6D2", "#F8F5B6", "#C94F6D"], head: "Playfair Display", body: "Plus Jakarta Sans", logo: "" };
+let kit = { ...DEFAULT_KIT };
+try { kit = { ...DEFAULT_KIT, ...JSON.parse(localStorage.getItem(KITKEY)) }; } catch (e) { /* usa o kit por defeito */ }
 
 const cv = $("#cv"), ctx = cv.getContext("2d"), board = $("#board"), ov = $("#ov"), stage = $("#stage");
 const W = () => FORMATS[doc.fmt].w, H = () => FORMATS[doc.fmt].h;
@@ -26,7 +33,7 @@ function withIds(p) { const q = clone(p); q.layers.forEach((l) => (l.id = uid())
 function snap(force) {
   const j = JSON.stringify({ doc, cur });
   if (j === last && !force) return;
-  if (last) { HIST.push(last); if (HIST.length > 80) HIST.shift(); }
+  if (last) { HIST.push(last); if (HIST.length > 80) HIST.shift(); pristine = false; }
   REDO = []; last = j; histUi(); save();
 }
 function restore(j) {
@@ -35,14 +42,26 @@ function restore(j) {
 }
 const undo = () => { if (HIST.length) { REDO.push(last); restore(HIST.pop()); } };
 const redo = () => { if (REDO.length) { HIST.push(last); restore(REDO.pop()); } };
+/** Alteração ainda a meio (ex.: a escrever): marca como editado e agenda a gravação. */
+function touch() { pristine = false; save(); }
 function histUi() { $("#undo").disabled = !HIST.length; $("#redo").disabled = !REDO.length; }
 let saveT, warned = false;
 function save() {
   clearTimeout(saveT);
-  saveT = setTimeout(() => {
-    try { localStorage.setItem(KEY, JSON.stringify({ doc, cur })); }
-    catch (e) { if (!warned) { warned = true; toast("Não consegui guardar neste dispositivo (fotos grandes). Descarrega o teu trabalho."); } }
-  }, 400);
+  saveT = setTimeout(async () => {
+    if (!projId) return;
+    try {
+      await store.putProject({ id: projId, name: projName, fmt: doc.fmt, created: projCreated, pristine, updated: Date.now(), thumb: coverThumb(), doc: clone(doc), cur });
+      localStorage.setItem(LAST, projId);
+      if (!store.persistent && !warned) { warned = true; toast("Este browser não deixa guardar projetos. Descarrega o teu trabalho."); }
+      if (!$('[data-panel="proj"]').hidden) projectsUi();
+    } catch (e) { if (!warned) { warned = true; toast("Não consegui guardar o projeto. Descarrega o teu trabalho."); } }
+  }, 500);
+}
+function coverThumb() {
+  const c = document.createElement("canvas"), w = 200; c.width = w; c.height = Math.round(w * H() / W());
+  const g = c.getContext("2d"); g.scale(w / W(), w / W()); renderPage(g, doc.pages[0], W(), H(), true);
+  try { return c.toDataURL("image/jpeg", .7); } catch (e) { return ""; }
 }
 
 /* ---------- desenho ---------- */
@@ -142,7 +161,8 @@ const toHex = (v) => {
 };
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const range = (k, label, min, max, step, v) => `<label class="fld"><span>${label}</span><input type="range" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${v ?? 0}"></label>`;
-const color = (k, label, v) => `<label class="fld"><span>${label}</span><input type="color" data-k="${k}" value="${toHex(v)}"></label>`;
+const kitRow = (k) => `<div class="kitrow" data-kitk="${k}">${kit.colors.map((c) => `<button class="sw s" data-kitc="${c}" style="background:${c}" title="${c}" aria-label="Cor da marca ${c}"></button>`).join("")}</div>`;
+const color = (k, label, v) => `<label class="fld"><span>${label}</span><input type="color" data-k="${k}" value="${toHex(v)}"></label>${kitRow(k)}`;
 const check = (k, label, v) => `<label class="fld"><span>${label}</span><input type="checkbox" data-k="${k}" ${v ? "checked" : ""}></label>`;
 const num = (k, label, v) => `<label class="fld"><span>${label}</span><input type="number" data-k="${k}" value="${Math.round(v ?? 0)}"></label>`;
 
@@ -200,12 +220,17 @@ $("#inspector").addEventListener("input", (e) => {
   if (k === "$pillbg") l.pill.bg = v;
   else if (k === "auto") { l.auto = v; l.cx = false; if (!v) l.w = l.w || getBox(l).w; draw(); inspector(); return snap(); }
   else l[k] = v;
-  draw();
+  draw(); touch();
 });
 $("#inspector").addEventListener("change", () => snap());
 $("#inspector").addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return;
   const l = sel(), L = page().layers;
+  if (b.dataset.kitc) {
+    const k = b.parentElement.dataset.kitk;
+    if (k === "$pillbg") l.pill.bg = b.dataset.kitc; else l[k] = b.dataset.kitc;
+    draw(); inspector(); return snap();
+  }
   if (b.dataset.v != null) { l[b.parentElement.dataset.seg] = b.dataset.v; draw(); inspector(); return snap(); }
   const a = b.dataset.act, i = L.indexOf(l);
   if (a === "front") { L.push(L.splice(i, 1)[0]); }
@@ -282,12 +307,12 @@ const MOODS = [
 ];
 SW.forEach((c) => { const b = document.createElement("button"); b.className = "sw"; b.style.background = c; b.onclick = () => { page().bg = { type: "color", c1: c }; draw(); syncBg(); snap(); }; $("#swatches").appendChild(b); });
 MOODS.forEach(([c1, c2, c3, st], i) => { const b = document.createElement("button"); b.className = "mood"; b.style.background = `linear-gradient(180deg,${c1},${c2})`; b.onclick = () => { page().bg = { type: "mesh", c1, c2, c3, seed: 3 + i * 7, stripes: st, tint: "#000", tintA: 0 }; draw(); syncBg(); snap(); }; $("#moods").appendChild(b); });
-$("#bgColor").addEventListener("input", (e) => { page().bg = { type: "color", c1: e.target.value }; draw(); });
+$("#bgColor").addEventListener("input", (e) => { page().bg = { type: "color", c1: e.target.value }; draw(); touch(); });
 $("#bgColor").addEventListener("change", () => snap());
 $("#bgPhoto").onclick = () => pickImage((src) => { page().bg = { type: "photo", src, c1: "#222", blur: 0, tint: "#000", tintA: .15 }; draw(); syncBg(); snap(); });
 $("#bgClear").onclick = () => { const b = page().bg; if (b.type === "photo") { page().bg = { type: "color", c1: "#F4EEE3" }; draw(); syncBg(); snap(); } };
-$("#bgBlur").addEventListener("input", (e) => { const b = page().bg; if (b.type === "photo") { b.blur = +e.target.value; draw(); } });
-$("#bgTint").addEventListener("input", (e) => { page().bg.tintA = +e.target.value; draw(); });
+$("#bgBlur").addEventListener("input", (e) => { const b = page().bg; if (b.type === "photo") { b.blur = +e.target.value; draw(); touch(); } });
+$("#bgTint").addEventListener("input", (e) => { page().bg.tintA = +e.target.value; draw(); touch(); });
 ["#bgBlur", "#bgTint"].forEach((s) => $(s).addEventListener("change", () => snap()));
 function syncBg() { const b = page().bg; $("#bgBlur").value = b.blur || 0; $("#bgTint").value = b.tintA || 0; if (b.type === "color") $("#bgColor").value = toHex(b.c1); }
 
@@ -312,25 +337,30 @@ onImageLoad(() => draw());
 
 /* ---------- templates ---------- */
 let cat = "Todos";
-function thumb(p, w) {
-  const c = document.createElement("canvas"); c.width = w; c.height = Math.round(w * 1.25);
-  const g = c.getContext("2d"); g.scale(w / 1080, w / 1080);
-  renderPage(g, withIds(p), 1080, 1350, true); return c;
+function thumb(p, w, fmt = "post") {
+  const f = FORMATS[fmt], c = document.createElement("canvas"); c.width = w; c.height = Math.round(w * f.h / f.w);
+  const g = c.getContext("2d"); g.scale(w / f.w, w / f.w);
+  renderPage(g, withIds(p), f.w, f.h, true); return c;
 }
 function templates() {
   $("#cats").innerHTML = CATEGORIES.map((c) => `<button class="${c === cat ? "on" : ""}" data-c="${c}">${c}</button>`).join("");
   const g = $("#tplGrid"); g.innerHTML = "";
   PACKS.filter((p) => cat === "Todos" || p.c === cat).forEach((p) => {
     const b = document.createElement("button"); b.className = "card";
-    b.appendChild(thumb(p.pages[0], 240));
+    b.appendChild(thumb(p.pages[0], 240, p.fmt));
     const d = document.createElement("div"); d.innerHTML = `${esc(p.n)}<small>${p.pages.length} páginas · ${esc(p.c)}</small>`; b.appendChild(d);
     b.onclick = () => applyPack(p); g.appendChild(b);
   });
 }
 $("#cats").addEventListener("click", (e) => { const b = e.target.closest("[data-c]"); if (b) { cat = b.dataset.c; templates(); } });
 function applyPack(p) {
+  const fresh = pristine && projId;   // o design atual ainda não foi mexido: substitui-o em vez de criar outro projeto
+  if (!fresh) { projId = newId(); projCreated = Date.now(); }
+  projName = p.n; $("#pname").value = projName;
   doc = { fmt: p.fmt, pages: p.pages.map(withIds) }; cur = 0; selId = null;
-  $("#fmt").value = doc.fmt; all(); snap(true); toast(`“${p.n}” aplicado · toca nos textos para os mudares`);
+  HIST = []; REDO = []; last = ""; pristine = true;
+  $("#fmt").value = doc.fmt; all(); snap(true);
+  toast(`“${p.n}” aberto · toca nos textos para os mudares`);
 }
 
 /* ---------- páginas ---------- */
@@ -371,22 +401,36 @@ $("#fmt").addEventListener("change", (e) => {
 const menuBtn = $("#exp"), pop = $("#expPop");
 menuBtn.onclick = (e) => { e.stopPropagation(); pop.hidden = !pop.hidden; };
 document.addEventListener("click", () => (pop.hidden = true));
-async function pngOf(i) {
+async function blobOf(i, type = "image/png") {
   await preloadDoc(doc); await document.fonts.ready;
   const c = document.createElement("canvas"); c.width = W(); c.height = H();
-  renderPage(c.getContext("2d"), doc.pages[i], W(), H(), true);
-  return new Promise((r) => c.toBlob(r, "image/png"));
+  const g = c.getContext("2d");
+  if (type === "image/jpeg") { g.fillStyle = "#fff"; g.fillRect(0, 0, W(), H()); }
+  renderPage(g, doc.pages[i], W(), H(), true);
+  return new Promise((r) => c.toBlob(r, type, .92));
 }
+const pngOf = (i) => blobOf(i, "image/png");
+const bytes = async (b) => new Uint8Array(await b.arrayBuffer());
+const slug = () => (projName || "design").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "design";
 function download(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
 pop.addEventListener("click", async (e) => {
   const k = e.target.dataset.exp; if (!k) return;
   toast("A preparar…");
   try {
-    if (k === "one" || doc.pages.length === 1) download(await pngOf(cur), `she-is-studio-${cur + 1}.png`);
-    else {
-      const files = [];
-      for (let i = 0; i < doc.pages.length; i++) files.push({ name: `slide-${i + 1}.png`, data: new Uint8Array(await (await pngOf(i)).arrayBuffer()) });
-      download(zip(files), "she-is-studio.zip");
+    const n = doc.pages.length;
+    if (k === "one") download(await blobOf(cur), `${slug()}-${cur + 1}.png`);
+    else if (k === "jpg") download(await blobOf(cur, "image/jpeg"), `${slug()}-${cur + 1}.jpg`);
+    else if (k === "pdf") {
+      const pages = [];
+      for (let i = 0; i < n; i++) pages.push({ jpg: await bytes(await blobOf(i, "image/jpeg")), w: W(), h: H() });
+      download(pdf(pages), `${slug()}.pdf`);
+    } else {
+      if (n === 1) download(await blobOf(0), `${slug()}.png`);
+      else {
+        const files = [];
+        for (let i = 0; i < n; i++) files.push({ name: `${slug()}-${i + 1}.png`, data: await bytes(await blobOf(i)) });
+        download(zip(files), `${slug()}.zip`);
+      }
     }
     toast("Pronto ✓");
   } catch (err) { toast("Não consegui exportar. Tenta outra vez."); console.error(err); }
@@ -397,6 +441,7 @@ function setTab(t) {
   if (t === "edit" && !mobile()) return;
   $$("#rail button").forEach((b) => b.classList.toggle("on", b.dataset.tab === t));
   $$(".panel").forEach((p) => (p.hidden = p.dataset.panel !== t));
+  if (t === "proj") projectsUi();
 }
 $("#rail").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setTab(b.dataset.tab); });
 $("#undo").onclick = undo; $("#redo").onclick = redo;
@@ -415,16 +460,105 @@ document.addEventListener("keydown", (e) => {
 let tT; function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(tT); tT = setTimeout(() => el.classList.remove("on"), 2600); }
 new ResizeObserver(() => doc.pages.length && fit()).observe(stage);
 
+/* ---------- projetos ---------- */
+const ago = (t) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? "agora" : m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : `há ${Math.round(m / 1440)} d`; };
+async function flush() { clearTimeout(saveT); if (projId) await store.putProject({ id: projId, name: projName, fmt: doc.fmt, created: projCreated, pristine, updated: Date.now(), thumb: coverThumb(), doc: clone(doc), cur }); }
+function load(p) {
+  doc = clone(p.doc); cur = Math.min(p.cur || 0, doc.pages.length - 1); selId = null;
+  projId = p.id; projName = p.name; projCreated = p.created || Date.now(); pristine = !!p.pristine;
+  HIST = []; REDO = []; last = ""; $("#pname").value = projName; $("#fmt").value = doc.fmt; all(); snap(true);
+}
+async function projectsUi() {
+  const list = await store.listProjects(), el = $("#projList");
+  $("#projCount").textContent = list.length ? `${list.length} ${list.length === 1 ? "projeto" : "projetos"}` : "";
+  el.innerHTML = list.length ? "" : '<p class="hint">Ainda não tens projetos. Escolhe um template para começares.</p>';
+  list.forEach((p) => {
+    const d = document.createElement("div"); d.className = "proj" + (p.id === projId ? " on" : "");
+    d.innerHTML = `<button class="pth" data-o="${p.id}" aria-label="Abrir ${esc(p.name)}">${p.thumb ? `<img src="${p.thumb}" alt="">` : ""}</button>
+      <div class="pm"><b>${esc(p.name)}</b><small>${p.doc.pages.length} ${p.doc.pages.length === 1 ? "página" : "páginas"} · ${ago(p.updated)}</small>
+      <div class="pa"><button data-d="${p.id}">Duplicar</button><button data-r="${p.id}">Renomear</button><button data-x="${p.id}" class="del">Apagar</button></div></div>`;
+    el.appendChild(d);
+  });
+}
+$("#projList").addEventListener("click", async (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const id = b.dataset.o || b.dataset.d || b.dataset.r || b.dataset.x; if (!id) return;
+  if (b.dataset.o) { if (id === projId) return setTab("tpl"); await flush(); load(await store.getProject(id)); toast("Projeto aberto"); }
+  else if (b.dataset.d) { const p = await store.getProject(id); await store.putProject({ ...clone(p), id: newId(), name: p.name + " (cópia)", created: Date.now(), updated: Date.now() }); projectsUi(); }
+  else if (b.dataset.r) {
+    const p = await store.getProject(id), nm = b.closest(".pm").querySelector("b"), inp = document.createElement("input");
+    inp.value = p.name; inp.className = "rn"; nm.replaceWith(inp); inp.focus(); inp.select();
+    const done = async () => { p.name = inp.value.trim() || p.name; await store.putProject(p); if (id === projId) { projName = p.name; $("#pname").value = p.name; } projectsUi(); };
+    inp.onblur = done; inp.onkeydown = (k) => { if (k.key === "Enter") inp.blur(); };
+  } else if (b.dataset.x) {
+    if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = "Confirmar?"; setTimeout(() => { b.dataset.armed = ""; b.textContent = "Apagar"; }, 3000); return; }
+    await store.delProject(id);
+    if (id === projId) { const rest = await store.listProjects(); if (rest.length) load(rest[0]); else applyPack(PACKS[0]); }
+    projectsUi();
+  }
+});
+$("#pname").addEventListener("input", (e) => { projName = e.target.value; save(); });
+$("#newDesign").onclick = () => setTab("tpl");
+
+/* ---------- marca ---------- */
+const saveKit = () => { try { localStorage.setItem(KITKEY, JSON.stringify(kit)); } catch (e) { toast("Logótipo demasiado grande para guardar."); } kitUi(false); };
+function kitUi(full = true) {
+  $("#kitSw").innerHTML = kit.colors.map((c) => `<button class="sw" data-bgk="${c}" style="background:${c}" title="${c}" aria-label="Fundo ${c}"></button>`).join("");
+  if (!full) return;
+  const sel2 = (id, v) => `<select id="${id}">${FONTS.map((f) => `<option ${f === v ? "selected" : ""}>${f}</option>`).join("")}</select>`;
+  $("#kitForm").innerHTML = `<label class="fld"><span>O teu @</span><input type="text" id="kitHandle" value="${esc(kit.handle)}" style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:170px"></label>
+    <h3>Cores</h3><div class="row">${kit.colors.map((c, i) => `<input type="color" class="kc" data-i="${i}" value="${c}" aria-label="Cor ${i + 1}">`).join("")}</div>
+    <h3>Letras</h3><label class="fld"><span>Títulos</span>${sel2("kitHead", kit.head)}</label><label class="fld"><span>Texto</span>${sel2("kitBody", kit.body)}</label>
+    <h3>Logótipo</h3><div class="row"><button class="chipb" id="kitLogoPick">${kit.logo ? "Trocar logótipo" : "+ Carregar logótipo"}</button>${kit.logo ? '<img class="logo" src="' + kit.logo + '" alt="Logótipo"><button class="chipb" id="kitLogoRm">Remover</button>' : ""}</div>`;
+}
+$("#kitForm").addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.id === "kitHandle") kit.handle = t.value;
+  else if (t.classList.contains("kc")) kit.colors[+t.dataset.i] = t.value;
+  else if (t.id === "kitHead") kit.head = t.value;
+  else if (t.id === "kitBody") kit.body = t.value;
+  else return;
+  saveKit();
+});
+$("#kitForm").addEventListener("click", (e) => {
+  if (e.target.id === "kitLogoPick") pickImage((src) => {
+    const im = new Image(); im.onload = () => {
+      const m = Math.min(1, 500 / Math.max(im.width, im.height)), c = document.createElement("canvas");
+      c.width = Math.round(im.width * m); c.height = Math.round(im.height * m); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+      kit.logo = c.toDataURL("image/png"); saveKit(); kitUi();
+    }; im.src = src;
+  });
+  else if (e.target.id === "kitLogoRm") { kit.logo = ""; saveKit(); kitUi(); }
+});
+$("#kitSw").addEventListener("click", (e) => { const c = e.target.dataset.bgk; if (c) { page().bg = { type: "color", c1: c }; draw(); syncBg(); snap(); } });
+$("#kitApply").onclick = () => {
+  let fonts = 0, hands = 0;
+  doc.pages.forEach((p) => p.layers.forEach((l) => {
+    if (l.t !== "text") return;
+    if (/^(o teu @|@o\.teu\.perfil)$/i.test(String(l.text).trim())) { l.text = kit.handle; hands++; }
+    const f = l.size >= 90 ? kit.head : kit.body;
+    if (l.font !== f) { l.font = f; fonts++; }
+  }));
+  draw(); inspector(); snap(); toast(fonts || hands ? `Marca aplicada: ${fonts} letras e ${hands} @ atualizados` : "O design já usa a tua marca.");
+};
+$("#kitLogoAdd").onclick = () => {
+  if (!kit.logo) return toast("Carrega primeiro o teu logótipo.");
+  const im = new Image(); im.onload = () => { const w = 200, h = Math.round(w * im.height / im.width); add({ t: "image", x: (W() - w) / 2, y: H() - h - 60, w, h, src: kit.logo, r: 0 }); }; im.src = kit.logo;
+};
+
 /* ---------- arranque ---------- */
 async function boot() {
   const wanted = [["400", "Plus Jakarta Sans"], ["600", "Plus Jakarta Sans"], ["800", "Plus Jakarta Sans"], ["400", "Instrument Serif"], ["italic 400", "Instrument Serif"], ["500", "Playfair Display"], ["italic 500", "Playfair Display"], ["600", "Caveat"], ["400", "Inter"], ["600", "Inter"]];
   await Promise.all(wanted.map(([w, f]) => document.fonts.load(`${w} 40px "${f}"`).catch(() => {})));
-  let saved = null;
-  try { saved = JSON.parse(localStorage.getItem(KEY)); } catch (e) { /* ignora */ }
-  if (saved && saved.doc && saved.doc.pages.length) { doc = saved.doc; cur = Math.min(saved.cur || 0, doc.pages.length - 1); }
-  else doc = { fmt: PACKS[0].fmt, pages: PACKS[0].pages.map(withIds) };
-  $("#fmt").value = doc.fmt;
-  templates(); all(); snap(true);
-  window.__studio = { get doc() { return doc; }, select, applyPack, PACKS, setPage: (i) => { cur = i; selId = null; all(); }, pngOf };
+  let p = null;
+  try { const id = localStorage.getItem(LAST); p = id && (await store.getProject(id)); } catch (e) { /* sem projeto anterior */ }
+  if (!p) {   // migra o design guardado pela primeira versão (localStorage)
+    try { const old = JSON.parse(localStorage.getItem(KEY)); if (old && old.doc && old.doc.pages.length) p = { id: newId(), name: "Design importado", doc: old.doc, cur: old.cur, created: Date.now() }; } catch (e) { /* ignora */ }
+  }
+  kitUi(); templates();
+  if (p) load(p);
+  else { projId = newId(); projCreated = Date.now(); projName = PACKS[0].n; pristine = true; doc = { fmt: PACKS[0].fmt, pages: PACKS[0].pages.map(withIds) }; $("#pname").value = projName; $("#fmt").value = doc.fmt; all(); snap(true); }
+  projectsUi();
+  window.__studio = { get doc() { return doc; }, select, applyPack, PACKS, setPage: (i) => { cur = i; selId = null; all(); }, pngOf, store, get projId() { return projId; }, flush };
 }
 boot();

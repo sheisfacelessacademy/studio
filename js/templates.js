@@ -38,7 +38,7 @@ const bubble = (text, o) => txt({
   pill: { bg: "#2F7CF6", px: 40, py: 28, r: 54, tail: "r" }, ...o,
 });
 
-export const CATEGORIES = ["Todos", "Feed viral", "Elementos", "Câmara", "Mensagens", "Notas", "Editorial"];
+export const CATEGORIES = ["Todos", "Feed viral", "Elementos", "Câmara", "Mensagens", "Notas", "Editorial", "Stories", "Pinterest"];
 
 export const PACKS = [
   /* ───────── 1. Feed viral: texto amarelo grande sobre foto ───────── */
@@ -250,6 +250,53 @@ export const PACKS = [
           txt({ text: n, auto: true, x: 90, y: 520 + i * 220, size: 40, weight: 600, font: ISERIF, italic: true, color: "#B9456F", lh: 1, align: "left" }),
           txt({ text: t, auto: true, x: 210, y: 510 + i * 220, size: 54, weight: 600, color: INK, lh: 1.1, align: "left", track: -.02 }),
         ]),
+      ] },
+    ],
+  },
+
+  /* ───────── 7. Stories (1080 × 1920) ───────── */
+  {
+    id: "story-perguntas", n: "Story: perguntas", c: "Stories", fmt: "story",
+    pages: [
+      { bg: mesh("#f5b9d1", "#b9456f", "#fff1f6", 61), layers: [
+        txt({ text: "pergunta\ndo dia", x: 40, y: 330, w: 1000, size: 190, lh: .9, track: -.05, color: "#fff", shadow: true }),
+        shape("rect", 110, 900, 860, 250, "#ffffff", { r: 70 }),
+        txt({ text: "Qual é o teu maior desafio a criar conteúdo?", x: 170, y: 960, w: 740, size: 54, weight: 800, color: INK, lh: 1.12, track: -.02, align: "left" }),
+        txt({ text: "responde aqui ↓", auto: true, cx: true, x: 540, y: 1240, size: 34, weight: 600, color: "#fff", lh: 1, pill: { bg: "rgba(0,0,0,.28)", px: 40, py: 22 } }),
+        sticker("spark", 840, 240, 140, "#fff"), sticker("heart", 90, 1560, 150, "#fff", { rot: -10 }),
+      ] },
+      { bg: solid(INK), layers: [
+        txt({ text: "vais\npublicar\nhoje?", x: 40, y: 360, w: 1000, size: 210, lh: .88, track: -.05, color: YEL }),
+        shape("rect", 110, 1100, 410, 170, YEL, { r: 85 }), txt({ text: "SIM", auto: true, cx: true, x: 315, y: 1155, size: 58, weight: 800, color: INK, lh: 1, track: .06 }),
+        shape("rect", 560, 1100, 410, 170, "", { r: 85, stroke: YEL, sw: 6 }), txt({ text: "AINDA NÃO", auto: true, cx: true, x: 765, y: 1155, size: 58, weight: 800, color: YEL, lh: 1, track: .06 }),
+        sticker("star", 800, 220, 150, YEL, { rot: 12 }),
+      ] },
+      { bg: solid(YEL), layers: [
+        txt({ text: "template\ngrátis", x: 40, y: 520, w: 1000, size: 200, lh: .88, track: -.05, color: INK }),
+        txt({ text: "link na bio", auto: true, cx: true, x: 540, y: 1180, size: 46, weight: 800, color: YEL, lh: 1, pill: { bg: INK, px: 60, py: 34 } }),
+        txt({ text: "↑", auto: true, cx: true, x: 540, y: 1330, size: 120, weight: 600, color: INK, lh: 1 }),
+        sticker("spark", 130, 300, 150, INK), sticker("spark", 820, 1500, 110, INK),
+      ] },
+    ],
+  },
+
+  /* ───────── 8. Pinterest (1080 × 1620) ───────── */
+  {
+    id: "pin-editorial", n: "Pin editorial", c: "Pinterest", fmt: "pin",
+    pages: [
+      { bg: solid(CREAM), layers: [
+        txt({ text: "ideias para o teu feed", auto: true, cx: true, x: 540, y: 110, size: 26, weight: 600, track: .3, upper: true, color: "rgba(22,18,16,.6)", lh: 1 }),
+        { t: "image", x: 160, y: 190, w: 760, h: 840, shape: "arch", ph: "#E0D3C2" },
+        txt({ text: "10 ideias de posts", auto: true, cx: true, x: 540, y: 1090, size: 130, weight: 400, italic: true, font: ISERIF, color: INK, lh: 1, track: -.02 }),
+        txt({ text: "que ninguém está a fazer", auto: true, cx: true, x: 540, y: 1230, size: 70, weight: 400, font: ISERIF, color: INK, lh: 1 }),
+        txt({ text: "guarda este pin", auto: true, cx: true, x: 540, y: 1430, size: 28, weight: 800, color: CREAM, lh: 1, pill: { bg: INK, px: 44, py: 26 } }),
+      ] },
+      { bg: mesh("#4a2736", "#160f14", "#a8506f", 71), layers: [
+        txt({ text: "Pesquise por:", auto: true, cx: true, x: 540, y: 250, size: 110, lh: 1, track: -.05, color: YEL }),
+        chip("aesthetic feed", 540, 420), chip("pink flower", 540, 540), chip("sparkle star", 540, 660),
+        sticker("heart", 260, 840, 330, "#F06FA6", { glitter: true, rot: -8 }),
+        sticker("star", 640, 900, 280, "#F8F5B6", { rot: 8 }),
+        sticker("spark", 420, 1200, 220, "#fff"), sticker("flower", 740, 1260, 190, "#F8A9CB"),
       ] },
     ],
   },

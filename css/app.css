@@ -108,3 +108,20 @@ textarea.tx:focus,select:focus,input:focus{outline:2px solid var(--sel);outline-
   .pages{padding:6px 10px}.pg{width:36px}.pgadd{width:36px;height:45px}
   .hd{width:28px;height:28px}.hd.br{right:-15px;bottom:-15px}
 }
+
+.pname{border:1px solid transparent;border-radius:10px;padding:8px 10px;font-size:13px;font-weight:600;background:transparent;min-width:0;width:200px}
+.pname:hover{border-color:var(--line)}.pname:focus{background:#fff}
+.kitrow{display:flex;gap:6px;margin:-2px 0 8px;justify-content:flex-end}
+.sw.s{width:22px;height:22px}
+.kc{width:46px;height:46px;border:1px solid var(--line);border-radius:12px;padding:3px;background:#fff}
+.logo{height:46px;max-width:120px;object-fit:contain;border:1px solid var(--line);border-radius:10px;padding:4px;background:#fff}
+.proj{display:flex;gap:12px;padding:10px;border-radius:14px;border:1px solid var(--line);margin-bottom:10px;background:var(--paper)}
+.proj.on{border-color:var(--ink)}
+.pth{flex:none;width:76px;border-radius:9px;overflow:hidden;background:var(--cream);align-self:flex-start}
+.pth img{display:block;width:100%}
+.pm{min-width:0;flex:1}.pm b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pm small{display:block;color:var(--mute);font-size:12px;margin:2px 0 8px}
+.pa{display:flex;gap:6px;flex-wrap:wrap}.pa button{padding:6px 10px;border-radius:8px;background:var(--cream);font-size:12px;font-weight:600}.pa .del{color:#b3261e}
+.rn{width:100%;border:1px solid var(--sel);border-radius:8px;padding:5px 8px;font-size:14px;font-weight:700}
+.card canvas{aspect-ratio:auto;height:auto}
+@media(max-width:899px){.pname{display:none}.brand{font-size:0;letter-spacing:0}.brand i{font-size:20px}.ic{width:32px;height:38px}#fmt{max-width:104px}.rail button{font-size:10px}.rail button span{font-size:18px}}
