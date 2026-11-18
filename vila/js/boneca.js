@@ -48,12 +48,12 @@ export function criarBoneca(opcoes = {}) {
     piv.position.set(lado * 0.075 * w, ANCA, 0);
     const calca = P.tipoBaixo === "calca";
     const perna = sombra(new THREE.Mesh(
-      new THREE.CylinderGeometry((calca ? 0.085 : 0.07) * w, (calca ? 0.075 : 0.045) * w, 0.78, 14),
+      new THREE.CapsuleGeometry((calca ? 0.072 : 0.058) * w, 0.62, 6, 16),
       calca ? matBaixo : pele));
-    perna.position.y = -0.39;
+    perna.position.y = -0.41;
     piv.add(perna);
     const sapato = sombra(new THREE.Mesh(new THREE.SphereGeometry(0.06, 14, 10), matSapato));
-    sapato.scale.set(1, 0.6, 1.9);
+    sapato.scale.set(1.05, 0.62, 2.0);
     sapato.position.set(0, -0.79, 0.04);
     piv.add(sapato);
     corpo.add(piv);
@@ -90,82 +90,82 @@ export function criarBoneca(opcoes = {}) {
 
   // ----- pescoço e cabeça -----
   const pescoco = sombra(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.12, 12), pele));
-  pescoco.position.y = 1.41;
+  pescoco.position.y = 1.42;
   corpo.add(pescoco);
 
   const cabeca = new THREE.Group();
-  cabeca.position.y = 1.58;
+  cabeca.position.y = 1.62;
   corpo.add(cabeca);
-  const cranio = sombra(new THREE.Mesh(new THREE.SphereGeometry(0.15, 28, 20), pele));
-  cranio.scale.set(0.92, 1.05, 0.95);
+  const cranio = sombra(new THREE.Mesh(new THREE.SphereGeometry(0.17, 32, 24), pele));
+  cranio.scale.set(0.9, 1.02, 0.94);
   cabeca.add(cranio);
 
   const nariz = new THREE.Mesh(new THREE.SphereGeometry(0.016, 10, 8), pele);
   nariz.scale.set(1, 0.9, 1.1);
-  nariz.position.set(0, -0.02, 0.143);
+  nariz.position.set(0, -0.025, 0.16);
   cabeca.add(nariz);
 
   const olhos = [];
   for (const lado of [-1, 1]) {
     const o = new THREE.Group();
-    o.position.set(lado * 0.056, 0.005, 0.124);
-    const branco = new THREE.Mesh(new THREE.SphereGeometry(0.03, 14, 10), liso("#fbfaf7", { roughness: 0.2 }));
+    o.position.set(lado * 0.064, 0.0, 0.142);
+    const branco = new THREE.Mesh(new THREE.SphereGeometry(0.038, 18, 12), liso("#fbfaf7", { roughness: 0.2 }));
     branco.scale.set(1, 1.1, 0.35);
     o.add(branco);
-    const iris = new THREE.Mesh(new THREE.SphereGeometry(0.021, 14, 10), liso(P.olhos, { roughness: 0.15 }));
+    const iris = new THREE.Mesh(new THREE.SphereGeometry(0.027, 18, 12), liso(P.olhos, { roughness: 0.15 }));
     iris.scale.set(1, 1, 0.3);
     iris.position.z = 0.009;
     o.add(iris);
-    const pupila = new THREE.Mesh(new THREE.SphereGeometry(0.01, 10, 8), liso("#0b0605"));
+    const pupila = new THREE.Mesh(new THREE.SphereGeometry(0.013, 10, 8), liso("#0b0605"));
     pupila.scale.z = 0.3;
-    pupila.position.z = 0.014;
+    pupila.position.z = 0.016;
     o.add(pupila);
-    const luz = new THREE.Mesh(new THREE.SphereGeometry(0.005, 8, 6), new THREE.MeshBasicMaterial({ color: "#ffffff" }));
-    luz.position.set(0.007, 0.008, 0.018);
+    const luz = new THREE.Mesh(new THREE.SphereGeometry(0.0075, 8, 6), new THREE.MeshBasicMaterial({ color: "#ffffff" }));
+    luz.position.set(0.01, 0.011, 0.022);
     o.add(luz);
-    const pestana = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.008, 0.01), liso("#150d0b"));
-    pestana.position.set(lado * 0.004, 0.03, 0.012);
+    const pestana = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.012, 0.012), liso("#150d0b"));
+    pestana.position.set(lado * 0.006, 0.036, 0.014);
     pestana.rotation.z = lado * -0.12;
     o.add(pestana);
-    const sobrancelha = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.009, 0.008), liso(P.cabelo));
-    sobrancelha.position.set(lado * 0.004, 0.058, 0.004);
+    const sobrancelha = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.011, 0.009), liso(P.cabelo));
+    sobrancelha.position.set(lado * 0.004, 0.07, 0.004);
     sobrancelha.rotation.z = lado * -0.16;
     o.add(sobrancelha);
     cabeca.add(o);
     olhos.push(o);
   }
-  const labios = new THREE.Mesh(new THREE.SphereGeometry(0.035, 14, 10), brilho(P.batom, { roughness: 0.2 }));
-  labios.scale.set(1, 0.34, 0.42);
-  labios.position.set(0, -0.07, 0.13);
+  const labios = new THREE.Mesh(new THREE.SphereGeometry(0.04, 16, 12), brilho(P.batom, { roughness: 0.2 }));
+  labios.scale.set(1, 0.38, 0.45);
+  labios.position.set(0, -0.085, 0.148);
   cabeca.add(labios);
   for (const lado of [-1, 1]) {
-    const blush = new THREE.Mesh(new THREE.CircleGeometry(0.03, 16),
+    const blush = new THREE.Mesh(new THREE.CircleGeometry(0.036, 18),
       new THREE.MeshBasicMaterial({ color: "#f08a8a", transparent: true, opacity: 0.32, depthWrite: false }));
-    blush.position.set(lado * 0.082, -0.035, 0.1);
+    blush.position.set(lado * 0.098, -0.04, 0.122);
     blush.rotation.y = lado * 0.6;
     cabeca.add(blush);
     if (P.brincos) {
       const b = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), ouro());
-      b.position.set(lado * 0.138, -0.05, 0.01);
+      b.position.set(lado * 0.155, -0.06, 0.01);
       cabeca.add(b);
     }
   }
   if (P.oculos) {
     const aro = liso("#1b1512", { roughness: 0.4 });
     for (const lado of [-1, 1]) {
-      const l = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.005, 8, 24), aro);
-      l.position.set(lado * 0.056, 0.005, 0.15);
+      const l = new THREE.Mesh(new THREE.TorusGeometry(0.047, 0.005, 8, 24), aro);
+      l.position.set(lado * 0.064, 0.0, 0.168);
       cabeca.add(l);
     }
     const ponte = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.006, 0.006), aro);
-    ponte.position.set(0, 0.012, 0.15);
+    ponte.position.set(0, 0.008, 0.168);
     cabeca.add(ponte);
   }
 
   // ----- cabelo -----
   const topoCabelo = new THREE.Mesh(
-    new THREE.SphereGeometry(0.165, 28, 18, 0, Math.PI * 2, 0, 1.75), cabelo);
-  topoCabelo.scale.set(0.92, 1.0, 0.96);
+    new THREE.SphereGeometry(0.188, 32, 20, 0, Math.PI * 2, 0, 1.78), cabelo);
+  topoCabelo.scale.set(0.93, 1.0, 0.97);
   topoCabelo.rotation.x = -0.62;
   topoCabelo.position.y = 0.003;
   topoCabelo.castShadow = true;
@@ -175,13 +175,13 @@ export function criarBoneca(opcoes = {}) {
   const estilo = P.estilo;
   if (estilo === "longo" || estilo === "ondas") {
     const larg = estilo === "ondas" ? 1.25 : 1.05;
-    const costas = sombra(new THREE.Mesh(new THREE.CapsuleGeometry(0.135, 0.52, 6, 18), cabelo));
-    costas.scale.set(larg, 1, 0.62);
-    costas.position.set(0, -0.28, -0.075);
+    const costas = sombra(new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.6, 8, 20), cabelo));
+    costas.scale.set(larg, 1, 0.66);
+    costas.position.set(0, -0.32, -0.085);
     cabeca.add(costas);
     for (const lado of [-1, 1]) {
-      const m = sombra(new THREE.Mesh(new THREE.CapsuleGeometry(0.03, 0.34, 4, 10), cabelo));
-      m.position.set(lado * 0.138, -0.17, 0.0);
+      const m = sombra(new THREE.Mesh(new THREE.CapsuleGeometry(0.04, 0.42, 6, 12), cabelo));
+      m.position.set(lado * 0.158, -0.2, 0.0);
       m.rotation.z = lado * -0.04;
       cabeca.add(m);
     }
@@ -198,11 +198,11 @@ export function criarBoneca(opcoes = {}) {
     }
   } else if (estilo === "carrapito") {
     const bola = sombra(new THREE.Mesh(new THREE.SphereGeometry(0.065, 16, 12), cabelo));
-    bola.position.set(0, 0.17, -0.07);
+    bola.position.set(0, 0.19, -0.08);
     cabeca.add(bola);
   } else if (estilo === "rabo") {
     rabo = new THREE.Group();
-    rabo.position.set(0, 0.1, -0.14);
+    rabo.position.set(0, 0.1, -0.16);
     const r = sombra(new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.3, 4, 12), cabelo));
     r.position.set(0, -0.17, -0.02);
     rabo.add(r);
@@ -218,18 +218,18 @@ export function criarBoneca(opcoes = {}) {
     ombro.position.set(lado * (0.17 * w + 0.045), 1.35, 0);
     ombro.rotation.z = lado * 0.07;
     const matSup = manga === "nenhuma" ? pele : matTop;
-    const sup = sombra(new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.032, 0.29, 12), matSup));
-    sup.position.y = -0.145;
+    const sup = sombra(new THREE.Mesh(new THREE.CapsuleGeometry(0.036, 0.22, 6, 12), matSup));
+    sup.position.y = -0.15;
     ombro.add(sup);
     const cotovelo = new THREE.Group();
     cotovelo.position.y = -0.29;
     const matInf = manga === "longas" ? matTop : pele;
-    const inf = sombra(new THREE.Mesh(new THREE.CylinderGeometry(0.031, 0.026, 0.27, 12), matInf));
-    inf.position.y = -0.135;
+    const inf = sombra(new THREE.Mesh(new THREE.CapsuleGeometry(0.03, 0.2, 6, 12), matInf));
+    inf.position.y = -0.14;
     cotovelo.add(inf);
-    const mao = sombra(new THREE.Mesh(new THREE.SphereGeometry(0.036, 12, 10), pele));
-    mao.scale.set(0.9, 1.15, 0.7);
-    mao.position.y = -0.3;
+    const mao = sombra(new THREE.Mesh(new THREE.SphereGeometry(0.04, 14, 12), pele));
+    mao.scale.set(0.85, 1.2, 0.7);
+    mao.position.y = -0.31;
     cotovelo.add(mao);
     cotovelo.rotation.x = -0.18;
     ombro.add(cotovelo);
@@ -261,7 +261,7 @@ export function criarBoneca(opcoes = {}) {
   const api = {
     grupo: raiz,
     params: P,
-    altura: 1.74 * esc,
+    altura: 1.86 * esc,
     acenar(on) { acenar = on ? 1 : 0; },
     atualizar(dt, velocidade = 0, tempo = 0) {
       const alvo = Math.min(1, velocidade / 3.2);

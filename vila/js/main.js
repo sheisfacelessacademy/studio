@@ -330,7 +330,10 @@ function atualizar(dt) {
     }
     n.api.atualizar(dt, n.vel, tempo);
   }
-  for (const p of [jogador, ...npcs]) p.lab.position.set(p.pos.x, p.api.altura + 0.55, p.pos.z);
+  for (const p of [jogador, ...npcs]) {
+    p.lab.position.set(p.pos.x, p.api.altura + 0.5, p.pos.z);
+    p.lab.visible = p === jogador || Math.hypot(p.pos.x - jogador.pos.x, p.pos.z - jogador.pos.z) < 9;
+  }
 
   // pergunta "falar"
   const p = ligado && !falando ? proxima() : null;
@@ -339,7 +342,7 @@ function atualizar(dt) {
 
   // câmara e sol seguem a Maria
   const alvo = new THREE.Vector3(jogador.pos.x, 1.2, jogador.pos.z);
-  const off = new THREE.Vector3(0, 12.5, 8.5).multiplyScalar(zoom);
+  const off = new THREE.Vector3(0, 9.5, 7).multiplyScalar(zoom);
   camara.position.lerp(alvo.clone().add(off), Math.min(1, dt * 4));
   camara.lookAt(alvo);
   sol.position.set(jogador.pos.x - 22, 30, jogador.pos.z + 16);
@@ -355,7 +358,7 @@ function ajustar() {
 }
 addEventListener("resize", ajustar);
 ajustar();
-camara.position.set(jogador.pos.x, 12.5, jogador.pos.z + 8.5);
+camara.position.set(jogador.pos.x, 9.5, jogador.pos.z + 7);
 
 renderer.setAnimationLoop(() => {
   const dt = Math.min(relogio.getDelta(), 0.05);
