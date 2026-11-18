@@ -1,7 +1,7 @@
 // A vila: ruas de calçada, prédios de telhado vermelho, árvores, candeeiros e carros.
 import * as THREE from "../vendor/three.module.js";
 
-const liso = (cor, o = {}) => new THREE.MeshStandardMaterial({ color: cor, roughness: 0.85, metalness: 0, ...o });
+const liso = (cor, o = {}) => new THREE.MeshStandardMaterial({ color: cor, roughness: 0.85, metalness: 0, envMapIntensity: 0.12, ...o });
 
 function texturaCalcada() {
   const c = document.createElement("canvas");
@@ -87,7 +87,7 @@ export function predio({ x, z, w, d, h, cor, cobertura = "#b5533c", nome, letrei
     g.add(ch);
   }
 
-  const janelaMat = new THREE.MeshStandardMaterial({ color: "#ffe3a3", emissive: "#ffb85c", emissiveIntensity: 0.55, roughness: 0.3 });
+  const janelaMat = new THREE.MeshStandardMaterial({ envMapIntensity: 0.3, color: "#ffe3a3", emissive: "#ffb85c", emissiveIntensity: 0.55, roughness: 0.3 });
   const moldura = liso("#fdf6e7");
   const colunas = Math.max(2, Math.floor((w - 1.5) / 2.2));
   const pisos = Math.max(1, Math.round(h / 3.2));
@@ -191,7 +191,7 @@ function carro(x, z, cor, rot = 0) {
 
 export function construirCidade(cena) {
   const colisoes = [];
-  const registar = (obj) => { if (obj.userData.caixa) colisoes.push(obj.userData.caixa); cena.add(obj); return obj; };
+  const registar = (obj) => { if (obj.userData.caixa) colisoes.push(obj.userData.caixa); obj.userData.ocluivel = true; cena.add(obj); return obj; };
 
   // chão (relva) e ruas
   const relva = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), liso("#a9c98a", { roughness: 1 }));
@@ -204,7 +204,7 @@ export function construirCidade(cena) {
     const t = calc.clone();
     t.needsUpdate = true;
     t.repeat.set(w / 4, d / 4);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ map: t, roughness: 0.95 }));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ map: t, roughness: 0.95, envMapIntensity: 0.12 }));
     m.rotation.x = -Math.PI / 2;
     m.position.set(x, 0.02, z);
     m.receiveShadow = true;
@@ -252,10 +252,13 @@ export function construirCidade(cena) {
   const fonte = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 1.2, 14), liso("#e7dfd0"));
   fonte.position.set(14, 0.75, 12);
   fonte.castShadow = true;
+  fonte.userData.ocluivel = true;
   cena.add(fonte);
 
   // candeeiros
-  for (const x of [-20, -12, 12, 20]) { cena.add(candeeiro(x, -3.7)); cena.add(candeeiro(x + 4, 3.7)); }
+  for (const x of [-20, -12, 12, 20]) {
+    for (const l of [candeeiro(x, -3.7), candeeiro(x + 4, 3.7)]) { l.userData.ocluivel = true; cena.add(l); }
+  }
 
   // carros estacionados
   registar(carro(-21, 2.2, "#ffd23f", Math.PI / 2));

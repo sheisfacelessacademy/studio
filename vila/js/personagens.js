@@ -5,7 +5,7 @@
 export const MARIA = {
   id: "maria", nome: "Maria", idade: 34, trabalho: "Mentora",
   boneca: { pele: "#d9a074", cabelo: "#2a1a12", estilo: "longo", altura: 161, corpo: 0.92,
-    top: "#f3ead8", baixo: "#4a78b0", tipoBaixo: "calca", mala: "#7a4a2b", mangas: "longas" },
+    top: "#f3ead8", baixo: "#3f6aa0", tipoBaixo: "calca", ganga: true, mala: "#7a4a2b", mangas: "longas", batom: "#c97a80" },
 };
 
 export const MULHERES = [
@@ -53,7 +53,7 @@ export const MULHERES = [
     id: "rita", nome: "Rita", idade: 38, trabalho: "Carteira", local: "correios",
     resumo: "Acorda às 5h, volta às 18h. Vê as filhas crescer em fotografias.",
     boneca: { pele: "#f1cdb0", cabelo: "#b5532d", estilo: "rabo", altura: 166, corpo: 1.0,
-      top: "#e0b84a", baixo: "#2e3a4d", tipoBaixo: "calca", sapato: "#1f1f1f", mangas: "curtas", mala: "#a82f2a", olhos: "#4a6a3a", batom: "#c06a6a" },
+      top: "#e0b84a", baixo: "#3a5578", tipoBaixo: "calca", ganga: true, sapato: "#1f1f1f", mangas: "curtas", mala: "#a82f2a", olhos: "#4a6a3a", batom: "#c06a6a" },
     produto: "comunidade",
     inicio: "a",
     cenas: {

@@ -1,4 +1,5 @@
 import * as THREE from "../vendor/three.module.js";
+import { RoomEnvironment } from "../vendor/addons/RoomEnvironment.js";
 import { criarBoneca } from "./boneca.js";
 import { construirCidade } from "./cidade.js";
 import { MARIA, MULHERES } from "./personagens.js";
@@ -21,7 +22,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 0.95;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const cena = new THREE.Scene();
@@ -32,8 +33,10 @@ cena.fog = new THREE.Fog(CEU, 45, 105);
 const camara = new THREE.PerspectiveCamera(38, 1, 0.5, 200);
 let zoom = 1;
 
-cena.add(new THREE.HemisphereLight("#fff0da", "#a58f6c", 1.05));
-const sol = new THREE.DirectionalLight("#ffd29a", 2.6);
+const pmrem = new THREE.PMREMGenerator(renderer);
+cena.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+cena.add(new THREE.HemisphereLight("#fff0da", "#a58f6c", 0.55));
+const sol = new THREE.DirectionalLight("#ffd29a", 2.3);
 sol.castShadow = true;
 sol.shadow.mapSize.set(2048, 2048);
 Object.assign(sol.shadow.camera, { left: -26, right: 26, top: 26, bottom: -26, near: 1, far: 90 });
@@ -42,6 +45,32 @@ sol.shadow.normalBias = 0.04;
 cena.add(sol, sol.target);
 
 const { colisoes, predios } = construirCidade(cena);
+const ocluiveis = cena.children.filter((o) => o.userData.ocluivel);
+const raioVista = new THREE.Raycaster();
+const escondidos = new Set();
+// esconde prédios e árvores que ficam entre a câmara e as personagens (como no Sims)
+function limparVista(alvos) {
+  const agora = new Set();
+  const pontos = [];
+  for (const t of alvos) for (const ox of [-1, 0, 1]) for (const oy of [-1, 0, 1]) {
+    pontos.push(t.clone().add(new THREE.Vector3(ox * t.raio, oy * t.raio * 0.8, 0)));
+  }
+  for (const t of pontos) {
+    const dir = t.clone().sub(camara.position);
+    const dist = dir.length();
+    raioVista.set(camara.position, dir.normalize());
+    raioVista.far = dist - 0.4;
+    for (const h of raioVista.intersectObjects(ocluiveis, true)) {
+      let o = h.object;
+      while (o.parent && o.parent !== cena) o = o.parent;
+      agora.add(o);
+    }
+  }
+  for (const o of escondidos) if (!agora.has(o)) o.visible = true;
+  for (const o of agora) o.visible = false;
+  escondidos.clear();
+  for (const o of agora) escondidos.add(o);
+}
 
 // ---------- movimento com colisões ----------
 function empurrar(pos) {
@@ -95,7 +124,7 @@ function criar(def, pos) {
   return { def, api, pos: api.grupo.position, lab, vel: 0, dir: 0 };
 }
 
-const jogador = criar(MARIA, new THREE.Vector3(-2, 0, 5.5));
+const jogador = criar(MARIA, new THREE.Vector3(-1.5, 0, 1.5));
 jogador.lab.visible = true;
 const npcs = MULHERES.map((m, i) => {
   const e = predios[m.local].userData.entrada.clone();
@@ -270,6 +299,7 @@ $("#entrar").onclick = () => { $("#intro").hidden = true; ligado = true; };
 // ---------- ciclo ----------
 const relogio = new THREE.Clock();
 const dirTecla = new THREE.Vector3();
+const olhar = new THREE.Vector3();
 let tempo = 0;
 
 function mover(e, dx, dz, dt, vmax) {
@@ -332,7 +362,7 @@ function atualizar(dt) {
   }
   for (const p of [jogador, ...npcs]) {
     p.lab.position.set(p.pos.x, p.api.altura + 0.5, p.pos.z);
-    p.lab.visible = p === jogador || Math.hypot(p.pos.x - jogador.pos.x, p.pos.z - jogador.pos.z) < 9;
+    p.lab.visible = !falando && (p === jogador || Math.hypot(p.pos.x - jogador.pos.x, p.pos.z - jogador.pos.z) < 9);
   }
 
   // pergunta "falar"
@@ -341,10 +371,39 @@ function atualizar(dt) {
   if (p) dica.textContent = `Falar com ${p.def.nome}  (E)`;
 
   // câmara e sol seguem a Maria
-  const alvo = new THREE.Vector3(jogador.pos.x, 1.2, jogador.pos.z);
-  const off = new THREE.Vector3(0, 9.5, 7).multiplyScalar(zoom);
-  camara.position.lerp(alvo.clone().add(off), Math.min(1, dt * 4));
-  camara.lookAt(alvo);
+  let alvo, posCam;
+  if (falando) {
+    // por cima do ombro da Maria, com o rosto da outra mulher em destaque
+    const d = falando.pos.clone().sub(jogador.pos).setY(0).normalize();
+    const lado = new THREE.Vector3(-d.z, 0, d.x);
+    if (lado.z < 0) lado.negate();
+    const retrato = camara.aspect < 0.8;
+    const yCab = falando.api.cabeca + 0.05;
+    alvo = falando.pos.clone().setY(yCab - (retrato ? 0.42 : 0.3));
+    posCam = jogador.pos.clone().addScaledVector(d, retrato ? -1.9 : -1.15).addScaledVector(lado, retrato ? 0.75 : 0.6)
+      .setY(jogador.api.cabeca + (retrato ? 0.25 : 0.12));
+  } else {
+    alvo = new THREE.Vector3(jogador.pos.x, 1.2, jogador.pos.z);
+    posCam = alvo.clone().add(new THREE.Vector3(0, 9.5, 7).multiplyScalar(zoom));
+  }
+  const k = Math.min(1, dt * (falando ? 3 : 4));
+  camara.position.lerp(posCam, k);
+  olhar.lerp(alvo, k);
+  camara.lookAt(olhar);
+  const cab = (e) => new THREE.Vector3(e.pos.x, e.api.cabeca, e.pos.z);
+  const comRaio = (v, r) => Object.assign(v, { raio: r });
+  limparVista(falando
+    ? [comRaio(cab(falando), 0.3), comRaio(new THREE.Vector3(falando.pos.x, 0.9, falando.pos.z), 0.4)]
+    : [comRaio(new THREE.Vector3(jogador.pos.x, 0.9, jogador.pos.z), 2.2)]);
+  if (falando) {
+    // a personagem vira-se meio para a Maria, meio para a câmara
+    const aM = Math.atan2(jogador.pos.x - falando.pos.x, jogador.pos.z - falando.pos.z);
+    const aC = Math.atan2(camara.position.x - falando.pos.x, camara.position.z - falando.pos.z);
+    const dif = Math.atan2(Math.sin(aC - aM), Math.cos(aC - aM));
+    const alvoRot = aM + dif * 0.55;
+    const r = falando.api.grupo.rotation;
+    r.y += Math.atan2(Math.sin(alvoRot - r.y), Math.cos(alvoRot - r.y)) * Math.min(1, dt * 5);
+  }
   sol.position.set(jogador.pos.x - 22, 30, jogador.pos.z + 16);
   sol.target.position.set(jogador.pos.x, 0, jogador.pos.z);
 }
@@ -359,6 +418,7 @@ function ajustar() {
 addEventListener("resize", ajustar);
 ajustar();
 camara.position.set(jogador.pos.x, 9.5, jogador.pos.z + 7);
+olhar.set(jogador.pos.x, 1.2, jogador.pos.z);
 
 renderer.setAnimationLoop(() => {
   const dt = Math.min(relogio.getDelta(), 0.05);
