@@ -379,8 +379,8 @@ function atualizar(dt) {
     if (lado.z < 0) lado.negate();
     const retrato = camara.aspect < 0.8;
     const yCab = falando.api.cabeca + 0.05;
-    alvo = falando.pos.clone().setY(yCab - (retrato ? 0.42 : 0.3));
-    posCam = jogador.pos.clone().addScaledVector(d, retrato ? -1.9 : -1.15).addScaledVector(lado, retrato ? 0.75 : 0.6)
+    alvo = falando.pos.clone().setY(yCab - (retrato ? 0.36 : 0.22));
+    posCam = jogador.pos.clone().addScaledVector(d, retrato ? -1.5 : -0.75).addScaledVector(lado, retrato ? 0.6 : 0.5)
       .setY(jogador.api.cabeca + (retrato ? 0.25 : 0.12));
   } else {
     alvo = new THREE.Vector3(jogador.pos.x, 1.2, jogador.pos.z);

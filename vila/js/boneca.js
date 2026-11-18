@@ -1,6 +1,7 @@
 // Construtor de bonecas 3D por código (sem modelos externos).
 // O rosto é pintado numa textura, como nas bonecas verdadeiras; cabelo e roupa têm textura própria.
 import * as THREE from "../vendor/three.module.js";
+import { mergeGeometries } from "../vendor/addons/BufferGeometryUtils.js";
 
 export const PADRAO = {
   pele: "#d9a074",
@@ -44,7 +45,7 @@ const guardado = (k, f) => { if (!cache.has(k)) cache.set(k, f()); return cache.
 
 // ---------- rosto pintado ----------
 // A textura cobre a esfera da cabeça: x = longitude (frente em 1/4 da largura), y = latitude.
-function pintarRosto(P) {
+function pintarRosto(P, fechado = false) {
   const W = 1024, H = 512;
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
@@ -80,6 +81,23 @@ function pintarRosto(P) {
     x.fillStyle = gs;
     x.beginPath(); x.ellipse(ex + s * 6, ey - 14, 50, 30, 0, 0, Math.PI * 2); x.fill();
 
+    if (fechado) {
+      x.strokeStyle = "#120a08";
+      x.lineCap = "round";
+      x.lineWidth = 5.5;
+      x.beginPath();
+      x.moveTo(dentro, ey + 2);
+      x.bezierCurveTo(dentro + s * 16, ey + 11, fora - s * 16, ey + 10, fora, ey - 2);
+      x.lineTo(fora + s * 12, ey - 8);
+      x.stroke();
+      x.lineWidth = 2.4;
+      for (let i = 0; i < 8; i++) {
+        const t = 0.2 + i * 0.1;
+        const px = dentro + (fora - dentro) * t;
+        const py = ey + 2 + Math.sin(t * Math.PI) * 8;
+        x.beginPath(); x.moveTo(px, py); x.lineTo(px + s * 4, py + 7); x.stroke();
+      }
+    } else {
     const amendoa = () => {
       x.beginPath();
       x.moveTo(dentro, ey + 3);
@@ -140,6 +158,7 @@ function pintarRosto(P) {
     x.moveTo(dentro + s * 8, ey + 8);
     x.bezierCurveTo(dentro + s * 22, ey + 16, fora - s * 16, ey + 13, fora, ey - 4);
     x.stroke();
+    }
     // sobrancelha (forma afinada)
     const corSob = C(P.cabelo).getHSL({}).l > 0.45 ? escurecer(P.cabelo, 0.45) : P.cabelo;
     x.fillStyle = corSob;
@@ -269,8 +288,170 @@ function texTecido(cor) {
   });
 }
 
+// ---------- cabelo em madeixas ----------
+// Cada fio é um tubo fino que nasce no couro cabeludo e cai com o peso,
+// contornando a cabeça, o pescoço e os ombros.
+const RX = 0.103, RY = 0.127, RZ = 0.114;  // raios da cabeça (eixos locais)
+const raioCabeca = (az) => 1 / Math.sqrt((Math.sin(az) / RX) ** 2 + (Math.cos(az) / RZ) ** 2);
+function raioCorpo(y, az, w) {
+  // y relativo ao centro da cabeça: pescoço até -0.17, ombros a partir de -0.2
+  if (y > -0.12) return 0;
+  const t = Math.min(1, Math.max(0, (-0.12 - y) / 0.09));
+  const rx = 0.05 + t * (0.19 * w - 0.05), rz = 0.05 + t * (0.105 * w - 0.05);
+  return 1 / Math.sqrt((Math.sin(az) / rx) ** 2 + (Math.cos(az) / rz) ** 2);
+}
+
+// Caminho de uma madeixa: nasce no couro cabeludo (ângulo th0) e cai até à altura `fim`.
+function caminho(P, w, az, th0, fim, camada, fase, passos = 16) {
+  const pts = [];
+  const y0 = Math.cos(th0) * RY;
+  let d = 0;
+  for (let k = 0; k <= passos; k++) {
+    const t = k / passos;
+    const y = y0 + (fim - y0) * (t * t * 0.35 + t * 0.65);
+    const rh = raioCabeca(az) * 1.04 + camada;
+    let alvo = y > 0 ? rh * Math.sqrt(Math.max(0.05, 1 - (y / (RY * 1.04)) ** 2)) : rh;
+    alvo = Math.max(alvo, raioCorpo(y, az, w) + camada + 0.006);
+    d = k === 0 ? alvo : (alvo > d ? d + (alvo - d) * 0.6 : d + (alvo - d) * 0.25);
+    let a = az, dd = d;
+    if (P.estilo === "ondas" && y < -0.05) { a += Math.sin(y * 18 + fase) * 0.025; dd += Math.sin(y * 16 + fase) * 0.006; }
+    pts.push(new THREE.Vector3(Math.sin(a) * dd, y, Math.cos(a) * dd));
+  }
+  return pts;
+}
+
+function fimFio(P, az, r) {
+  const longo = P.estilo === "longo" || P.estilo === "ondas";
+  return longo ? -0.6 - r * 0.08 + (Math.abs(az) < 1.6 ? 0.08 : 0) : -0.105 - r * 0.03;
+}
+
+// Massa de cabelo contínua (por baixo das madeixas), para não haver buracos.
+function massaCabelo(P, w) {
+  const longo = P.estilo === "longo" || P.estilo === "ondas";
+  const frente = longo ? 1.0 : 0.9;
+  const NA = 48, NT = 16;
+  const pos = [], uv = [], idx = [];
+  for (let i = 0; i <= NA; i++) {
+    const az = frente + (Math.PI * 2 - 2 * frente) * (i / NA);
+    const pts = caminho(P, w, az, 0.25, fimFio(P, az > Math.PI ? az - Math.PI * 2 : az, 0.3), 0.0, 0, NT);
+    for (let k = 0; k <= NT; k++) {
+      pos.push(pts[k].x, pts[k].y, pts[k].z);
+      uv.push(i / NA * 4, 1 - k / NT);
+    }
+  }
+  for (let i = 0; i < NA; i++) for (let k = 0; k < NT; k++) {
+    const a = i * (NT + 1) + k, b = (i + 1) * (NT + 1) + k;
+    idx.push(a, b, a + 1, b, b + 1, a + 1);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+function fios(P, w) {
+  const longo = P.estilo === "longo" || P.estilo === "ondas";
+  const n = longo ? 260 : 200;
+  const base = C(P.cabelo);
+  const geos = [];
+  let semente = 7;
+  const rnd = () => { semente = (semente * 16807) % 2147483647; return semente / 2147483647; };
+  for (let i = 0; i < n; i++) {
+    let az = (rnd() * 2 - 1) * Math.PI;
+    const frente = longo ? 0.95 : 0.85;
+    if (Math.abs(az) < frente) az = Math.sign(az || 1) * (frente + rnd() * 0.25);
+    const th0 = 0.2 + rnd() * (Math.abs(az) > 2.2 ? 1.2 : 0.75);
+    const pts = caminho(P, w, az, th0, fimFio(P, az, rnd()), 0.004 + rnd() * 0.01, rnd() * 6.28);
+    const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 20, longo ? 0.0058 : 0.0065, 4, false);
+    const cor = base.clone().offsetHSL(0, (rnd() - 0.5) * 0.06, (rnd() - 0.5) * 0.14);
+    const cores = new Float32Array(g.attributes.position.count * 3);
+    for (let j = 0; j < cores.length; j += 3) { cores[j] = cor.r; cores[j + 1] = cor.g; cores[j + 2] = cor.b; }
+    g.setAttribute("color", new THREE.BufferAttribute(cores, 3));
+    geos.push(g);
+  }
+  return mergeGeometries(geos);
+}
+
+function fiosRabo(P) {
+  const geos = [];
+  const base = C(P.cabelo);
+  for (let i = 0; i < 46; i++) {
+    const a = Math.random() * Math.PI * 2, r = Math.random() * 0.022;
+    const ox = Math.cos(a) * r, oz = Math.sin(a) * r;
+    const L = 0.26 + Math.random() * 0.08;
+    const pts = [];
+    for (let k = 0; k <= 10; k++) {
+      const t = k / 10;
+      const abre = Math.sin(t * Math.PI) * 0.6 + 0.4;
+      pts.push(new THREE.Vector3(ox * abre * 1.4, -t * L, -0.02 - t * 0.05 + oz * abre * 1.4));
+    }
+    const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, 0.009, 4, false);
+    const cor = base.clone().offsetHSL(0, 0, (Math.random() - 0.5) * 0.12);
+    const cores = new Float32Array(g.attributes.position.count * 3);
+    for (let j = 0; j < cores.length; j += 3) { cores[j] = cor.r; cores[j + 1] = cor.g; cores[j + 2] = cor.b; }
+    g.setAttribute("color", new THREE.BufferAttribute(cores, 3));
+    geos.push(g);
+  }
+  return mergeGeometries(geos);
+}
+
+// ---------- formas do corpo ----------
+// Membro afunilado (torno), com origem no topo e a crescer para baixo.
+function membro(perfil, segs = 18) {
+  const pts = new THREE.SplineCurve(perfil.map(([r, y]) => new THREE.Vector2(r, -y))).getPoints(24);
+  pts.reverse();
+  return new THREE.LatheGeometry(pts.map((p) => new THREE.Vector2(Math.max(0.0005, p.x), p.y)), segs);
+}
+
+function cabecaEsculpida() {
+  const g = new THREE.SphereGeometry(0.12, 56, 40);
+  const p = g.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    const yn = v.y / 0.12;
+    // maxilar e queixo mais estreitos
+    const t = Math.min(1, Math.max(0, (-yn - 0.12) / 0.88));
+    const estreita = 1 - 0.36 * t * t - 0.08 * t;
+    v.x *= estreita;
+    v.z *= 1 - 0.12 * t * t;
+    // queixo ligeiramente para a frente
+    if (v.z > 0) v.z += 0.01 * t * t * (v.z / 0.12);
+    // maçãs do rosto
+    const m = Math.exp(-(((yn + 0.18) / 0.18) ** 2)) * Math.max(0, v.z / 0.12);
+    v.x *= 1 + 0.035 * m;
+    // nuca mais cheia
+    if (v.z < 0 && yn > -0.3) v.z *= 1.05;
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+function mao(pele, lado) {
+  const g = new THREE.Group();
+  const palma = new THREE.Mesh(new THREE.SphereGeometry(0.03, 16, 12), pele);
+  palma.scale.set(0.85, 1.25, 0.45);
+  palma.position.y = -0.03;
+  g.add(palma);
+  for (let i = 0; i < 4; i++) {
+    const f = new THREE.Mesh(new THREE.CapsuleGeometry(0.0058, 0.032 - Math.abs(i - 1.5) * 0.004, 4, 8), pele);
+    f.position.set((i - 1.5) * 0.0115, -0.082 + Math.abs(i - 1.5) * 0.003, 0.002);
+    f.rotation.x = 0.12;
+    g.add(f);
+  }
+  const pol = new THREE.Mesh(new THREE.CapsuleGeometry(0.0065, 0.024, 4, 8), pele);
+  pol.position.set(-lado * 0.022, -0.045, 0.01);
+  pol.rotation.set(0.3, 0, lado * 0.6);
+  g.add(pol);
+  g.traverse((o) => { o.castShadow = true; });
+  return g;
+}
+
 // ---------- materiais ----------
-const plastico = (cor, o = {}) => new THREE.MeshPhysicalMaterial({ color: cor, roughness: 0.36, clearcoat: 0.55, clearcoatRoughness: 0.3, envMapIntensity: 0.6, ...o });
+const plastico = (cor, o = {}) => new THREE.MeshPhysicalMaterial({ color: cor, roughness: 0.4, clearcoat: 0.35, clearcoatRoughness: 0.4, envMapIntensity: 0.5, ...o });
 const pano = (map, o = {}) => new THREE.MeshStandardMaterial({ map, roughness: 0.9, envMapIntensity: 0.3, ...o });
 const ouro = () => new THREE.MeshStandardMaterial({ color: "#e6b85e", roughness: 0.2, metalness: 1, envMapIntensity: 1.4 });
 
@@ -280,85 +461,113 @@ export function criarBoneca(opcoes = {}) {
   const raiz = new THREE.Group();
   const corpo = new THREE.Group();
   raiz.add(corpo);
+  const S = (m) => { m.castShadow = true; return m; };
 
-  const pele = plastico(P.pele, { roughness: 0.3 });
-  const cabelo = new THREE.MeshPhysicalMaterial({
-    map: texCabelo(P.cabelo), roughness: 0.42, clearcoat: 0.6, clearcoatRoughness: 0.25,
-    sheen: 1, sheenColor: C(clarear(P.cabelo, 0.5)), sheenRoughness: 0.35, envMapIntensity: 0.7,
+  const pele = plastico(P.pele, { roughness: 0.42, clearcoat: 0.25, sheen: 0.4, sheenColor: C(clarear(P.pele, 0.5)) });
+  const matCab = new THREE.MeshPhysicalMaterial({
+    vertexColors: true, roughness: 0.45, clearcoat: 0.4, clearcoatRoughness: 0.3,
+    sheen: 1, sheenColor: C(clarear(P.cabelo, 0.55)), sheenRoughness: 0.3, envMapIntensity: 0.6,
   });
+  const matCapa = new THREE.MeshPhysicalMaterial({ map: texCabelo(P.cabelo), roughness: 0.5, clearcoat: 0.3, envMapIntensity: 0.5 });
   const matTop = pano(texMalha(P.top));
   const matBaixo = pano(P.ganga ? texGanga(P.baixo) : texTecido(P.baixo));
   const matSapato = plastico(P.sapato, { roughness: 0.3, clearcoat: 0.8 });
-  const sombra = (m) => { m.castShadow = true; return m; };
+  const calca = P.tipoBaixo === "calca";
 
-  // ----- pernas -----
-  const ANCA = 0.82;
+  // ----- pernas: coxa + canela, com joelho -----
+  const ANCA = 0.86;
   const pernas = [];
   for (const lado of [-1, 1]) {
-    const piv = new THREE.Group();
-    piv.position.set(lado * 0.075 * w, ANCA, 0);
-    const calca = P.tipoBaixo === "calca";
-    const perna = sombra(new THREE.Mesh(new THREE.CapsuleGeometry((calca ? 0.074 : 0.056) * w, 0.62, 8, 18), calca ? matBaixo : pele));
-    perna.position.y = -0.41;
-    if (calca) perna.scale.x = 1.08;
-    piv.add(perna);
-    const sapato = sombra(new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), matSapato));
-    sapato.scale.set(1.05, 0.62, 2.0);
-    sapato.position.set(0, -0.79, 0.04);
-    piv.add(sapato);
-    corpo.add(piv);
-    pernas.push(piv);
+    const coxaPiv = new THREE.Group();
+    coxaPiv.position.set(lado * 0.072 * w, ANCA, 0);
+    const k = calca ? 1.12 : 1;
+    const coxa = S(new THREE.Mesh(membro([[0.072 * w * k, 0], [0.075 * w * k, 0.06], [0.06 * w * k, 0.22], [0.045 * k, 0.37], [0.04 * k, 0.4]]), calca ? matBaixo : pele));
+    coxaPiv.add(coxa);
+    const joelho = new THREE.Group();
+    joelho.position.y = -0.39;
+    const canela = S(new THREE.Mesh(membro([[0.042 * k, 0], [0.045 * k, 0.1], [0.036 * k, 0.24], [0.026 * (calca ? 1.4 : 1), 0.36], [0.024 * (calca ? 1.4 : 1), 0.39]]), calca ? matBaixo : pele));
+    joelho.add(canela);
+    joelho.add(S(new THREE.Mesh(new THREE.SphereGeometry(0.043 * k, 14, 10), calca ? matBaixo : pele)));
+    const pe = S(new THREE.Mesh(new THREE.SphereGeometry(0.05, 18, 12), matSapato));
+    pe.scale.set(0.8, 0.55, 2.0);
+    pe.position.set(0, -0.43, 0.045);
+    joelho.add(pe);
+    coxaPiv.add(joelho);
+    corpo.add(coxaPiv);
+    pernas.push({ coxaPiv, joelho });
   }
 
-  // ----- tronco com cintura -----
+  // ----- tronco: ancas, cintura, peito e ombros -----
   const perfil = [
-    [0.001, 0], [0.15 * w, 0], [0.175 * w, 0.08], [0.125 * w, 0.26],
-    [0.152 * w, 0.4], [0.145 * w, 0.5], [0.12 * w, 0.56], [0.06, 0.6], [0.001, 0.61],
-  ].map(([x, y]) => new THREE.Vector2(x, y));
-  const tronco = sombra(new THREE.Mesh(new THREE.LatheGeometry(new THREE.SplineCurve(perfil).getPoints(28), 32), matTop));
-  tronco.scale.z = 0.72;
+    [0.001, -0.02], [0.12 * w, -0.02], [0.152 * w, 0.06], [0.148 * w, 0.12], [0.112 * w, 0.21],
+    [0.104 * w, 0.25], [0.118 * w, 0.33], [0.128 * w, 0.4], [0.122 * w, 0.46], [0.105, 0.51], [0.05, 0.545], [0.001, 0.55],
+  ].map(([r, y]) => new THREE.Vector2(r, y));
+  const gT = new THREE.LatheGeometry(new THREE.SplineCurve(perfil).getPoints(40), 40);
+  {
+    const p = gT.attributes.position, v = new THREE.Vector3();
+    for (let i = 0; i < p.count; i++) {
+      v.fromBufferAttribute(p, i);
+      const om = THREE.MathUtils.smoothstep(v.y, 0.38, 0.5);
+      v.x *= 1 + 0.42 * om;              // ombros
+      v.z *= 0.68 - 0.1 * om;            // profundidade
+      const peito = Math.exp(-(((v.y - 0.36) / 0.06) ** 2)) * Math.max(0, v.z) * 0.55;
+      v.z += peito;                      // busto
+      const nadega = Math.exp(-(((v.y - 0.06) / 0.07) ** 2)) * Math.max(0, -v.z) * 0.25;
+      v.z -= nadega;
+      p.setXYZ(i, v.x, v.y, v.z);
+    }
+    gT.computeVertexNormals();
+  }
+  const tronco = S(new THREE.Mesh(gT, matTop));
   tronco.position.y = ANCA;
   corpo.add(tronco);
 
-  if (P.tipoBaixo === "saia") {
-    const saia = sombra(new THREE.Mesh(new THREE.CylinderGeometry(0.165 * w, 0.27 * w, 0.42, 32, 1, true), matBaixo.clone()));
+  if (!calca) {
+    const saiaPerf = [[0.12 * w, 0.2], [0.155 * w, 0.06], [0.2 * w, -0.14], [0.235 * w, -0.3]].map(([r, y]) => new THREE.Vector2(r, y)).reverse();
+    const saia = S(new THREE.Mesh(new THREE.LatheGeometry(new THREE.SplineCurve(saiaPerf).getPoints(16), 40), matBaixo.clone()));
     saia.material.side = THREE.DoubleSide;
-    saia.scale.z = 0.85;
-    saia.position.y = ANCA - 0.15;
+    saia.scale.z = 0.8;
+    saia.position.y = ANCA;
     corpo.add(saia);
   } else {
-    const cinto = sombra(new THREE.Mesh(new THREE.CylinderGeometry(0.158 * w, 0.168 * w, 0.1, 28), matBaixo));
-    cinto.scale.z = 0.74;
-    cinto.position.y = ANCA + 0.03;
+    const cinto = S(new THREE.Mesh(new THREE.CylinderGeometry(0.153 * w, 0.156 * w, 0.06, 32), matBaixo));
+    cinto.scale.z = 0.69;
+    cinto.position.y = ANCA + 0.05;
     corpo.add(cinto);
   }
   if (P.avental) {
-    const av = sombra(new THREE.Mesh(new THREE.BoxGeometry(0.26 * w, 0.42, 0.02), pano(texTecido(P.avental))));
-    av.position.set(0, ANCA + 0.22, 0.125 * w);
+    const av = S(new THREE.Mesh(new THREE.BoxGeometry(0.24 * w, 0.4, 0.012), pano(texTecido(P.avental))));
+    av.position.set(0, ANCA + 0.08, 0.112 * w);
     corpo.add(av);
   }
 
   // ----- pescoço e cabeça -----
-  const pescoco = sombra(new THREE.Mesh(new THREE.CapsuleGeometry(0.048, 0.08, 4, 14), pele));
-  pescoco.position.y = 1.44;
+  const pescoco = S(new THREE.Mesh(membro([[0.04, 0], [0.038, 0.06], [0.045, 0.11], [0.06, 0.13]]), pele));
+  pescoco.position.y = 1.49;
   corpo.add(pescoco);
 
   const cabeca = new THREE.Group();
-  cabeca.position.y = 1.62;
+  cabeca.position.y = 1.575;
   corpo.add(cabeca);
-  const rosto = plastico("#ffffff", { map: pintarRosto(P), roughness: 0.32, clearcoat: 0.45 });
-  const cranio = sombra(new THREE.Mesh(new THREE.SphereGeometry(0.17, 48, 32), rosto));
-  cranio.scale.set(0.9, 1.04, 0.94);
+  const mapaAberto = pintarRosto(P);
+  const mapaFechado = pintarRosto(P, true);
+  const rosto = plastico("#ffffff", { map: mapaAberto, roughness: 0.42, clearcoat: 0.25 });
+  const cranio = S(new THREE.Mesh(cabecaEsculpida(), rosto));
+  cranio.scale.set(0.86, 1.06, 0.95);
   cabeca.add(cranio);
-  const nariz = new THREE.Mesh(new THREE.SphereGeometry(0.018, 12, 10), pele);
-  nariz.scale.set(0.9, 1.1, 1.0);
-  nariz.position.set(0, -0.022, 0.153);
+  const nariz = new THREE.Mesh(new THREE.SphereGeometry(0.02, 16, 12), pele);
+  nariz.scale.set(0.62, 1.25, 0.8);
+  nariz.position.set(0, -0.03, 0.106);
+  nariz.rotation.x = -0.25;
   cabeca.add(nariz);
-
   for (const lado of [-1, 1]) {
+    const orelha = new THREE.Mesh(new THREE.SphereGeometry(0.022, 12, 10), pele);
+    orelha.scale.set(0.35, 1.15, 0.8);
+    orelha.position.set(lado * 0.1, -0.012, -0.005);
+    cabeca.add(orelha);
     if (P.brincos) {
-      const b = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.004, 8, 16), ouro());
-      b.position.set(lado * 0.155, -0.07, 0.0);
+      const b = new THREE.Mesh(new THREE.TorusGeometry(0.012, 0.0028, 8, 16), ouro());
+      b.position.set(lado * 0.104, -0.045, 0.0);
       b.rotation.y = Math.PI / 2;
       cabeca.add(b);
     }
@@ -366,134 +575,143 @@ export function criarBoneca(opcoes = {}) {
   if (P.oculos) {
     const aro = plastico("#1b1512", { roughness: 0.25 });
     for (const lado of [-1, 1]) {
-      const l = new THREE.Mesh(new THREE.TorusGeometry(0.048, 0.006, 8, 28), aro);
-      l.scale.y = 0.8;
-      l.position.set(lado * 0.064, 0.0, 0.168);
+      const l = new THREE.Mesh(new THREE.TorusGeometry(0.031, 0.0045, 8, 28), aro);
+      l.scale.y = 0.78;
+      l.position.set(lado * 0.04, 0.0, 0.118);
       cabeca.add(l);
     }
-    const ponte = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.006, 0.006), aro);
-    ponte.position.set(0, 0.008, 0.17);
+    const ponte = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.005, 0.005), aro);
+    ponte.position.set(0, 0.006, 0.12);
     cabeca.add(ponte);
   }
 
   // ----- cabelo -----
-  const topoCabelo = sombra(new THREE.Mesh(new THREE.SphereGeometry(0.186, 40, 24, 0, Math.PI * 2, 0, 1.82), cabelo));
-  topoCabelo.scale.set(0.94, 1.02, 0.98);
-  topoCabelo.rotation.x = -0.82;
-  topoCabelo.position.set(0, 0.006, -0.004);
-  cabeca.add(topoCabelo);
-
+  const capa = S(new THREE.Mesh(new THREE.SphereGeometry(0.128, 48, 28, 0, Math.PI * 2, 0, 1.85), matCapa));
+  capa.scale.set(0.87, 1.06, 0.97);
+  capa.rotation.x = -0.86;
+  capa.position.set(0, 0.004, -0.003);
+  cabeca.add(capa);
   let rabo = null;
-  const estilo = P.estilo;
-  if (estilo === "longo" || estilo === "ondas") {
-    const larg = estilo === "ondas" ? 1.22 : 1.05;
-    const costas = sombra(new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.6, 10, 24), cabelo));
-    costas.scale.set(larg, 1, 0.62);
-    costas.position.set(0, -0.32, -0.09);
-    cabeca.add(costas);
-    // madeixas a emoldurar o rosto, a partir da risca ao meio
-    for (const lado of [-1, 1]) {
-      const m = sombra(new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.46, 8, 14), cabelo));
-      m.scale.set(0.7, 1, 1.25);
-      m.position.set(lado * 0.148, -0.22, 0.0);
-      m.rotation.z = lado * 0.08;
-      cabeca.add(m);
-    }
-  } else if (estilo === "curto") {
-    const costas = sombra(new THREE.Mesh(new THREE.SphereGeometry(0.188, 32, 20, Math.PI, Math.PI, 0.45, 1.85), cabelo));
-    costas.position.set(0, -0.05, -0.012);
-    cabeca.add(costas);
-    for (const lado of [-1, 1]) {
-      const m = sombra(new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.12, 6, 12), cabelo));
-      m.scale.z = 0.8;
-      m.position.set(lado * 0.152, -0.08, 0.02);
-      cabeca.add(m);
-    }
-  } else if (estilo === "carrapito") {
-    const bola = sombra(new THREE.Mesh(new THREE.SphereGeometry(0.07, 20, 14), cabelo));
-    bola.position.set(0, 0.2, -0.08);
+  if (P.estilo === "longo" || P.estilo === "ondas" || P.estilo === "curto") {
+    const massa = S(new THREE.Mesh(massaCabelo(P, w), matCapa.clone()));
+    massa.material.side = THREE.DoubleSide;
+    cabeca.add(massa);
+    cabeca.add(S(new THREE.Mesh(fios(P, w), matCab)));
+  } else if (P.estilo === "carrapito") {
+    const bola = S(new THREE.Mesh(new THREE.SphereGeometry(0.05, 24, 16), matCapa));
+    bola.position.set(0, 0.12, -0.075);
     cabeca.add(bola);
-  } else if (estilo === "rabo") {
+  } else if (P.estilo === "rabo") {
     rabo = new THREE.Group();
-    rabo.position.set(0, 0.1, -0.16);
-    const r = sombra(new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.32, 6, 14), cabelo));
-    r.position.set(0, -0.18, -0.02);
-    rabo.add(r);
-    rabo.rotation.x = 0.25;
+    rabo.position.set(0, 0.07, -0.115);
+    rabo.add(S(new THREE.Mesh(fiosRabo(P), matCab)));
+    const atilho = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.006, 6, 12), plastico("#2b2b2b"));
+    atilho.rotation.x = Math.PI / 2;
+    rabo.add(atilho);
+    rabo.rotation.x = 0.35;
     cabeca.add(rabo);
   }
 
-  // ----- braços -----
+  // ----- braços: ombro, cotovelo, pulso e mão com dedos -----
   const bracos = [];
   for (const lado of [-1, 1]) {
     const ombro = new THREE.Group();
-    ombro.position.set(lado * (0.17 * w + 0.045), 1.35, 0);
-    ombro.rotation.z = lado * 0.07;
-    const sup = sombra(new THREE.Mesh(new THREE.CapsuleGeometry(0.036, 0.22, 8, 14), P.mangas === "nenhuma" ? pele : matTop));
-    sup.position.y = -0.15;
+    ombro.position.set(lado * 0.158 * w, 1.375, -0.005);
+    ombro.rotation.z = lado * 0.1;
+    const mSup = P.mangas === "nenhuma" ? pele : matTop;
+    const sup = S(new THREE.Mesh(membro([[0.042 * w, 0], [0.043 * w, 0.04], [0.036 * w, 0.17], [0.03, 0.27], [0.029, 0.28]]), mSup));
     ombro.add(sup);
+    const capOmbro = S(new THREE.Mesh(new THREE.SphereGeometry(0.044 * w, 16, 12), mSup));
+    ombro.add(capOmbro);
     const cotovelo = new THREE.Group();
-    cotovelo.position.y = -0.29;
-    const inf = sombra(new THREE.Mesh(new THREE.CapsuleGeometry(0.03, 0.2, 8, 14), P.mangas === "longas" ? matTop : pele));
-    inf.position.y = -0.14;
+    cotovelo.position.y = -0.27;
+    const mInf = P.mangas === "longas" ? matTop : pele;
+    const inf = S(new THREE.Mesh(membro([[0.03, 0], [0.032, 0.05], [0.026, 0.17], [0.02, 0.24], [0.019, 0.25]]), mInf));
     cotovelo.add(inf);
-    const mao = sombra(new THREE.Mesh(new THREE.SphereGeometry(0.04, 16, 12), pele));
-    mao.scale.set(0.85, 1.2, 0.7);
-    mao.position.y = -0.31;
-    cotovelo.add(mao);
-    cotovelo.rotation.x = -0.18;
+    cotovelo.add(S(new THREE.Mesh(new THREE.SphereGeometry(0.031, 12, 10), mInf)));
+    const m = mao(pele, lado);
+    m.position.y = -0.245;
+    cotovelo.add(m);
+    cotovelo.rotation.x = -0.22;
     ombro.add(cotovelo);
     corpo.add(ombro);
-    bracos.push({ ombro, cotovelo, mao });
+    bracos.push({ ombro, cotovelo, mao: m });
   }
   if (P.mala) {
-    const mala = sombra(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.15, 0.06), plastico(P.mala, { roughness: 0.45, clearcoat: 0.3 })));
-    mala.position.set(0, -0.09, 0.02);
-    mala.rotation.z = 0.15;
+    const mala = S(new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.12, 0.05), plastico(P.mala, { roughness: 0.45, clearcoat: 0.3 })));
+    mala.position.set(0, -0.1, 0.03);
+    mala.rotation.z = 0.12;
     bracos[0].mao.add(mala);
   }
   if (P.colar) {
-    const colar = new THREE.Mesh(new THREE.TorusGeometry(0.072, 0.0035, 6, 32), ouro());
-    colar.rotation.x = Math.PI / 2.4;
-    colar.position.set(0, 1.37, 0.035);
+    const colar = new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.0028, 6, 40), ouro());
+    colar.rotation.x = Math.PI / 2.3;
+    colar.position.set(0, 1.43, 0.03);
+    colar.scale.set(1, 0.85, 1);
     corpo.add(colar);
-    const pend = new THREE.Mesh(new THREE.SphereGeometry(0.009, 10, 8), ouro());
-    pend.position.set(0, 1.315, 0.095);
+    const pend = new THREE.Mesh(new THREE.SphereGeometry(0.0075, 10, 8), ouro());
+    pend.position.set(0, 1.385, 0.08);
     corpo.add(pend);
   }
 
   const esc = P.altura / 161;
   raiz.scale.setScalar(esc);
 
-  // ----- animação -----
+  // ----- vida: andar, respirar, piscar, mudar o peso -----
   let fase = Math.random() * 6;
   let amp = 0;
   let acenar = 0;
+  let piscar = 1 + Math.random() * 3;
+  const sem = Math.random() * 10;
   return {
     grupo: raiz,
     params: P,
-    altura: 1.86 * esc,
-    cabeca: 1.62 * esc,
+    altura: 1.72 * esc,
+    cabeca: 1.575 * esc,
     acenar(on) { acenar = on ? 1 : 0; },
     atualizar(dt, velocidade = 0, tempo = 0) {
       const alvo = Math.min(1, velocidade / 3.2);
       amp += (alvo - amp) * Math.min(1, dt * 10);
-      fase += dt * (4 + velocidade * 2.6);
-      const s = Math.sin(fase) * 0.75 * amp;
-      pernas[0].rotation.x = s;
-      pernas[1].rotation.x = -s;
-      bracos[0].ombro.rotation.x = -s * 0.8;
-      bracos[1].ombro.rotation.x = s * 0.8;
-      corpo.position.y = Math.abs(Math.cos(fase)) * 0.025 * amp;
-      corpo.rotation.y = Math.sin(fase) * 0.08 * amp;
-      cabeca.rotation.y = Math.sin(tempo * 0.7 + P.altura) * 0.12 * (1 - amp);
-      cabeca.rotation.z = Math.sin(tempo * 0.5 + P.altura) * 0.04 * (1 - amp);
-      if (rabo) rabo.rotation.x = 0.25 + Math.sin(fase) * 0.18 * amp;
+      fase += dt * (3.5 + velocidade * 2.4);
+      const s = Math.sin(fase);
+      const parado = 1 - amp;
+      // pernas com joelho a dobrar na fase de balanço
+      pernas[0].coxaPiv.rotation.x = s * 0.6 * amp;
+      pernas[1].coxaPiv.rotation.x = -s * 0.6 * amp;
+      pernas[0].joelho.rotation.x = Math.max(0, -Math.cos(fase - 0.6)) * 0.9 * amp;
+      pernas[1].joelho.rotation.x = Math.max(0, Math.cos(fase - 0.6)) * 0.9 * amp;
+      // braços opostos às pernas, cotovelo solto
+      bracos[0].ombro.rotation.x = -s * 0.5 * amp;
+      bracos[1].ombro.rotation.x = s * 0.5 * amp;
+      bracos[0].cotovelo.rotation.x = -0.22 - Math.max(0, s) * 0.35 * amp;
+      bracos[1].cotovelo.rotation.x = -0.22 - Math.max(0, -s) * 0.35 * amp;
+      // corpo: passo, respiração e peso numa perna quando parada
+      const peso = Math.sin(tempo * 0.45 + sem) * parado;
+      corpo.position.y = Math.abs(Math.cos(fase)) * 0.02 * amp;
+      corpo.position.x = peso * 0.012;
+      corpo.rotation.z = -peso * 0.02;
+      corpo.rotation.y = s * 0.06 * amp;
+      pernas[0].coxaPiv.rotation.z = Math.max(0, peso) * 0.04;
+      pernas[1].coxaPiv.rotation.z = Math.min(0, peso) * 0.04;
+      tronco.scale.set(1 + Math.sin(tempo * 1.7 + sem) * 0.006, 1, 1 + Math.sin(tempo * 1.7 + sem) * 0.012);
+      cabeca.rotation.y = Math.sin(tempo * 0.6 + sem) * 0.15 * parado;
+      cabeca.rotation.x = Math.sin(tempo * 0.4 + sem) * 0.04 * parado;
+      cabeca.rotation.z = Math.sin(tempo * 0.5 + sem) * 0.035 * parado;
+      if (rabo) rabo.rotation.x = 0.35 + s * 0.15 * amp + Math.sin(tempo * 1.3) * 0.02;
+      // piscar os olhos
+      piscar -= dt;
+      if (piscar < 0) {
+        rosto.map = mapaFechado;
+        if (piscar < -0.12) { rosto.map = mapaAberto; piscar = 2 + Math.random() * 4; }
+      }
       if (acenar) {
-        bracos[1].ombro.rotation.z = 2.5 + Math.sin(tempo * 9) * 0.22;
+        bracos[1].ombro.rotation.z = 2.3 + Math.sin(tempo * 7) * 0.12;
         bracos[1].ombro.rotation.x = 0;
+        bracos[1].cotovelo.rotation.x = 0;
+        bracos[1].cotovelo.rotation.z = 0.5 + Math.sin(tempo * 7) * 0.3;
       } else {
-        bracos[1].ombro.rotation.z += (0.07 - bracos[1].ombro.rotation.z) * Math.min(1, dt * 8);
+        bracos[1].ombro.rotation.z += (0.1 - bracos[1].ombro.rotation.z) * Math.min(1, dt * 8);
+        bracos[1].cotovelo.rotation.z *= 1 - Math.min(1, dt * 8);
       }
     },
   };
