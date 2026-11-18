@@ -79,7 +79,7 @@ function etiqueta(texto, sub) {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
-  s.scale.set(2.8, 0.7, 1);
+  s.scale.set(2.2, 0.55, 1);
   s.renderOrder = 10;
   return s;
 }
@@ -135,7 +135,7 @@ addEventListener("keydown", (e) => {
 });
 addEventListener("keyup", (e) => teclas.delete(e.key.toLowerCase()));
 addEventListener("blur", () => teclas.clear());
-canvas.addEventListener("wheel", (e) => { zoom = Math.max(0.65, Math.min(1.5, zoom + Math.sign(e.deltaY) * 0.08)); e.preventDefault(); }, { passive: false });
+canvas.addEventListener("wheel", (e) => { zoom = Math.max(0.3, Math.min(1.5, zoom + Math.sign(e.deltaY) * 0.08)); e.preventDefault(); }, { passive: false });
 
 const ray = new THREE.Raycaster();
 const plano = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -339,7 +339,7 @@ function atualizar(dt) {
 
   // câmara e sol seguem a Maria
   const alvo = new THREE.Vector3(jogador.pos.x, 1.2, jogador.pos.z);
-  const off = new THREE.Vector3(0, 13, 15).multiplyScalar(zoom);
+  const off = new THREE.Vector3(0, 12.5, 8.5).multiplyScalar(zoom);
   camara.position.lerp(alvo.clone().add(off), Math.min(1, dt * 4));
   camara.lookAt(alvo);
   sol.position.set(jogador.pos.x - 22, 30, jogador.pos.z + 16);
@@ -355,7 +355,7 @@ function ajustar() {
 }
 addEventListener("resize", ajustar);
 ajustar();
-camara.position.set(jogador.pos.x, 14, jogador.pos.z + 16);
+camara.position.set(jogador.pos.x, 12.5, jogador.pos.z + 8.5);
 
 renderer.setAnimationLoop(() => {
   const dt = Math.min(relogio.getDelta(), 0.05);
@@ -363,4 +363,4 @@ renderer.setAnimationLoop(() => {
   renderer.render(cena, camara);
 });
 
-window.__vila = { jogador, npcs, abrir, destino: (x, z) => { destino = { pos: new THREE.Vector3(x, 0, z), npc: null }; }, feitas };
+window.__vila = { zoom: (v) => { zoom = v; }, jogador, npcs, abrir, destino: (x, z) => { destino = { pos: new THREE.Vector3(x, 0, z), npc: null }; }, feitas };
