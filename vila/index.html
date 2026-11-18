@@ -4,84 +4,125 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vila She Is</title>
-<meta name="description" content="Uma vila 3D com histórias reais de mulheres portuguesas. Protótipo.">
+<meta name="description" content="Histórias ilustradas de mulheres portuguesas. Protótipo.">
 <style>
   :root { --tinta:#4a2f25; --rosa:#d9879b; --rosa2:#b5677a; --creme:#fff8ee; --ouro:#e0b25a; }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #f6d2a8; color: var(--tinta);
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #f6e3d2; color: var(--tinta);
     font-family: "Helvetica Neue", Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
-  #cena { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
   [hidden] { display: none !important; }
-  button { font: inherit; cursor: pointer; }
+  button { font: inherit; cursor: pointer; color: inherit; }
 
-  #contador { position: fixed; top: max(14px, env(safe-area-inset-top)); left: 14px; z-index: 5;
-    background: var(--creme); border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 700; color: var(--tinta);
-    box-shadow: 0 6px 20px rgba(74,47,37,.18); }
-  #marca { position: fixed; top: max(14px, env(safe-area-inset-top)); right: 14px; z-index: 5; font-weight: 700; letter-spacing: .02em;
-    background: rgba(255,248,238,.8); border-radius: 999px; padding: 10px 14px; font-size: 13px; }
-  #ajuda { position: fixed; bottom: max(14px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 4;
-    background: rgba(255,248,238,.85); border-radius: 999px; padding: 8px 16px; font-size: 13px; white-space: nowrap; }
-  #falar { position: fixed; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 48px); left: 50%; transform: translateX(-50%); z-index: 6;
-    background: var(--rosa); color: #fff; border: 0; border-radius: 999px; padding: 14px 24px; font-weight: 700; font-size: 16px;
-    box-shadow: 0 8px 24px rgba(181,103,122,.45); }
+  /* ----- entrada ----- */
+  #intro { position: fixed; inset: 0; display: grid; grid-template-columns: 1fr 1fr; align-items: center;
+    background: radial-gradient(circle at 70% 40%, #fbeee0, #f0c9b0 60%, #e2a59a); padding: 24px; gap: 12px; }
+  #intro .txt { max-width: 460px; justify-self: end; }
+  #intro .proto { font-size: 12px; color: var(--rosa2); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+  #intro h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(40px, 7vw, 76px); line-height: .95; margin: 8px 0 14px; font-weight: 400; }
+  #intro p { font-size: 17px; line-height: 1.5; margin: 8px 0; }
+  #intro-figura { height: min(90vh, 760px); justify-self: start; }
+  #intro-figura svg { height: 100%; width: auto; }
+  .botao { background: var(--rosa); color: #fff; border: 0; border-radius: 999px; padding: 16px 30px; font-size: 18px; font-weight: 700; margin-top: 14px;
+    box-shadow: 0 10px 28px rgba(181,103,122,.4); }
+  @media (max-width: 720px) {
+    #intro { grid-template-columns: 1fr; grid-template-rows: 1fr auto; text-align: center; padding: 16px; }
+    #intro .txt { justify-self: center; order: 2; }
+    #intro-figura { height: 46vh; justify-self: center; }
+  }
 
-  #dialogo { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(14px, env(safe-area-inset-bottom)); z-index: 8;
-    width: min(640px, calc(100% - 24px)); background: var(--creme); border-radius: 24px; padding: 18px 18px 14px;
-    box-shadow: 0 18px 50px rgba(74,47,37,.35); max-height: 72vh; overflow: auto; }
-  .d-topo { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
-  .d-topo b { font-size: 20px; }
-  .d-topo span { font-size: 13px; color: var(--rosa2); font-weight: 600; }
-  .d-texto { margin: 0 0 14px; font-size: 17px; line-height: 1.5; }
-  .d-ops { display: grid; gap: 8px; }
-  .d-ops button, .fim { background: #fff; border: 2px solid var(--rosa); color: var(--tinta); border-radius: 16px; padding: 12px 14px; text-align: left; font-size: 15px; font-weight: 600; }
-  .d-ops button:hover, .d-ops button:focus-visible { background: #fbe6ec; }
-  .fim { width: 100%; background: var(--rosa); color: #fff; border-color: var(--rosa); text-align: center; margin-top: 12px; }
-  .sair { background: none; border: 0; color: var(--rosa2); margin-top: 8px; padding: 6px; font-size: 13px; }
-  .produto { background: #fff; border: 2px dashed var(--ouro); border-radius: 18px; padding: 12px 14px; }
+  /* ----- mapa ----- */
+  #mapa { position: fixed; inset: 0; overflow: auto; background: linear-gradient(#f9dfc2, #f3cfae 40%, #cfe0b4 40%, #bcd59e); padding: 20px 16px 40px; }
+  .topo { display: flex; justify-content: space-between; align-items: center; max-width: 1100px; margin: 0 auto 16px; gap: 12px; }
+  .topo h2 { font-family: Georgia, serif; font-weight: 400; font-size: clamp(26px, 4vw, 38px); margin: 0; }
+  #contador { background: var(--creme); border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 700; box-shadow: 0 6px 18px rgba(74,47,37,.15); white-space: nowrap; }
+  #predios { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 16px; }
+  .predio { background: rgba(255,248,238,.92); border: 0; border-radius: 22px; padding: 14px 14px 16px; text-align: center; display: grid; gap: 6px;
+    box-shadow: 0 8px 22px rgba(74,47,37,.12); transition: transform .15s; }
+  .predio:hover, .predio:focus-visible { transform: translateY(-4px); }
+  .predio svg { width: 100%; height: auto; }
+  .predio b { font-size: 18px; }
+  .predio span { font-size: 14px; color: var(--rosa2); font-weight: 600; }
+  .predio.feita span { color: #5a8a52; }
+
+  /* ----- palco das cenas ----- */
+  #palco { position: fixed; inset: 0; overflow: hidden; background: #e9d2b8; }
+  #fundo, #fundo svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .ator { position: absolute; bottom: 0; height: min(96vh, 1050px); aspect-ratio: 600 / 1100; }
+  .ator svg { width: 100%; height: 100%; transform-origin: 50% 94%; animation: respirar 4.5s ease-in-out infinite; }
+  #ator-npc { left: 50%; transform: translateX(-12%); }
+  #ator-maria { left: 50%; transform: translateX(-118%); }
+  #palco.so #ator-npc { transform: translateX(-50%); }
+  #palco.so #ator-maria { display: none; }
+  .entra { animation: entrar .5s ease-out; }
+  @keyframes entrar { from { opacity: 0; translate: 0 18px; } }
+  @keyframes respirar { 50% { transform: scaleY(1.006); } }
+  @media (max-width: 720px) {
+    #ator-maria { display: none; }
+    #ator-npc { transform: translateX(-50%); height: 88vh; bottom: 12vh; }
+  }
+
+  #caixa { position: absolute; left: 50%; transform: translateX(-50%); bottom: max(14px, env(safe-area-inset-bottom)); z-index: 5;
+    width: min(760px, calc(100% - 24px)); background: rgba(255,248,238,.97); border-radius: 26px; padding: 18px 20px 14px;
+    box-shadow: 0 18px 50px rgba(74,47,37,.3); max-height: 60vh; overflow: auto; }
+  #caixa .nome { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  #caixa .nome b { font-family: Georgia, serif; font-size: 24px; font-weight: 400; }
+  #caixa .nome span { font-size: 13px; color: var(--rosa2); font-weight: 700; }
+  #caixa .texto { margin: 0 0 12px; font-size: 18px; line-height: 1.5; min-height: 2.6em; }
+  #caixa.narrador .texto { font-style: italic; color: #6b5247; }
+  .ops { display: grid; gap: 8px; }
+  .op { background: #fff; border: 2px solid var(--rosa); border-radius: 16px; padding: 12px 14px; text-align: left; font-size: 15px; font-weight: 600; }
+  .op em { color: var(--rosa2); font-style: normal; font-weight: 800; }
+  .op:hover, .op:focus-visible { background: #fbe6ec; }
+  .op.principal { background: var(--rosa); color: #fff; text-align: center; }
+  .op:has(.sair) { border: 0; background: none; padding: 4px; text-align: center; }
+  .sair { color: var(--rosa2); font-size: 13px; font-weight: 600; }
+  .produto { background: #fff; border: 2px dashed var(--ouro); border-radius: 18px; padding: 12px 14px; margin-bottom: 12px; }
   .produto small { color: var(--rosa2); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
-  .produto h3 { margin: 4px 0; font-size: 19px; }
+  .produto h3 { margin: 4px 0; font-family: Georgia, serif; font-weight: 400; font-size: 22px; }
   .produto p { margin: 0 0 10px; font-size: 14px; line-height: 1.45; }
   .produto a, .cta { display: inline-block; background: var(--tinta); color: #fff; border-radius: 999px; padding: 10px 16px; font-weight: 700; text-decoration: none; font-size: 14px; }
 
-  #modal, #intro { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: rgba(74,47,37,.45); backdrop-filter: blur(4px); }
-  .cartao { width: min(560px, 100%); max-height: 86vh; overflow: auto; background: var(--creme); border-radius: 26px; padding: 24px; text-align: left; }
-  .cartao h2 { margin: 0 0 12px; font-size: 24px; }
+  /* ----- modal ----- */
+  #modal { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: rgba(74,47,37,.45); backdrop-filter: blur(4px); }
+  .cartao { width: min(560px, 100%); max-height: 86vh; overflow: auto; background: var(--creme); border-radius: 26px; padding: 24px; }
+  .cartao h2 { margin: 0 0 12px; font-family: Georgia, serif; font-weight: 400; font-size: 28px; }
   .cartao p { line-height: 1.5; }
   .peq { font-size: 13px; color: var(--rosa2); font-weight: 700; }
-  .fechar { margin-top: 16px; background: none; border: 2px solid var(--tinta); border-radius: 999px; padding: 10px 18px; font-weight: 700; color: var(--tinta); }
+  .fechar { margin-top: 16px; background: none; border: 2px solid var(--tinta); border-radius: 999px; padding: 10px 18px; font-weight: 700; }
   .diario { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
   .diario li { background: #fff; border-radius: 16px; padding: 12px 14px; font-size: 14px; line-height: 1.45; }
   .diario li span { color: #6b5247; }
   .diario li em { display: block; margin-top: 6px; color: var(--rosa2); font-style: normal; font-weight: 700; }
   .diario li.trancada { opacity: .55; }
-  #intro { background: linear-gradient(160deg, #f9d9b4, #f0a98f 60%, #d9879b); backdrop-filter: none; }
-  #intro .cartao { text-align: center; background: rgba(255,248,238,.92); }
-  #intro h1 { margin: 0 0 6px; font-size: 38px; line-height: 1.05; }
-  #intro p { margin: 8px 0; }
-  #entrar { background: var(--rosa); color: #fff; border: 0; border-radius: 999px; padding: 16px 32px; font-size: 18px; font-weight: 700; margin-top: 12px; box-shadow: 0 10px 28px rgba(181,103,122,.45); }
-  .proto { font-size: 12px; color: var(--rosa2); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 </style>
 </head>
 <body>
-<canvas id="cena"></canvas>
 
-<button id="contador" type="button">📖 Diário 0/5</button>
-<div id="marca">Vila She Is</div>
-<div id="ajuda">Setas ou WASD para andar · toca no chão para ir · toca numa mulher para falar</div>
-<button id="falar" type="button" hidden>Falar</button>
-<div id="dialogo" hidden></div>
+<section id="intro">
+  <div class="txt">
+    <div class="proto">Protótipo</div>
+    <h1>Vila<br>She Is</h1>
+    <p>Uma vila pequena, cinco mulheres portuguesas e cinco histórias reais.</p>
+    <p>Tu és a Maria: mãe, freelancer e a mulher que trouxe o Faceless para Portugal.</p>
+    <button id="entrar" class="botao" type="button">Começar a história</button>
+  </div>
+  <div id="intro-figura"></div>
+</section>
+
+<section id="mapa" hidden>
+  <div class="topo"><h2>A vila</h2><button id="contador" type="button">📖 Diário 0/5</button></div>
+  <div id="predios"></div>
+</section>
+
+<section id="palco" hidden>
+  <div id="fundo"></div>
+  <div id="ator-maria" class="ator"></div>
+  <div id="ator-npc" class="ator"></div>
+  <div id="caixa"></div>
+</section>
+
 <div id="modal" hidden></div>
 
-<div id="intro">
-  <div class="cartao">
-    <div class="proto">Protótipo</div>
-    <h1>Vila She Is</h1>
-    <p>Uma vila pequena, cinco mulheres portuguesas e cinco histórias reais.</p>
-    <p>Tu és a Maria. Caminha pela vila, ouve cada mulher e descobre o que a faz acordar a meio da noite.</p>
-    <button id="entrar" type="button">Entrar na vila</button>
-  </div>
-</div>
-
-<script type="module" src="js/main.js"></script>
+<script type="module" src="js/jogo.js"></script>
 </body>
 </html>
