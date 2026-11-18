@@ -1,0 +1,73 @@
+<!doctype html><html lang="pt-PT"><head><meta charset="utf-8">
+<link rel="stylesheet" href="/css/fonts.css">
+<style>
+body{margin:0;background:#efe9e3;font-family:Inter,sans-serif;color:#3b2d26}
+.grade{display:flex;gap:28px;padding:28px;justify-content:center}
+.col{display:grid;gap:12px;justify-items:center}
+.col h2{margin:0;font-family:"Instrument Serif",serif;font-weight:400;font-size:30px}
+.col .sw{display:flex;gap:6px}.col .sw i{width:26px;height:26px;border-radius:50%;display:block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.tel{width:360px;height:740px;border-radius:38px;overflow:hidden;position:relative;box-shadow:0 20px 50px rgba(60,40,30,.25)}
+.tel .bg{position:absolute;inset:0}.tel .bg svg{width:100%;height:100%}
+.tel .fig{position:absolute;left:50%;bottom:150px;height:560px;transform:translateX(-50%)}.tel .fig svg{height:100%;width:auto}
+.tel .titulo{position:absolute;top:26px;left:0;right:0;text-align:center}
+.card{position:absolute;left:14px;right:14px;bottom:14px;padding:16px 16px 12px}
+.card .n{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.card p{margin:0 0 10px;font-size:14px;line-height:1.45}
+.card .op{font-size:13px;font-weight:600;padding:10px 12px;margin-top:6px}
+</style></head><body><div class="grade" id="g"></div>
+<script type="module">
+import { figura } from '/vila/js/figura.js';
+const base = { pele:"#f3d0b0", cabelo:"#d9ad62", estilo:"ondas", olhos:"#4f7fa8", altura:172, corpo:.9, idade:29, sapatos:{cor:"#d9a88a",salto:true}, item:"pasta", itemCor:"#8a5430" };
+const E = [
+ { nome:"Latte", sub:"clean girl, bege e minimal", sw:["#f5efe6","#e6d7c3","#c9ad8c","#8b6b52","#a3ad92"],
+   fig:{...base, batom:"#c48a7e", top:{tipo:"blusa",cor:"#fbf6ee"}, baixo:{tipo:"saia",cor:"#cdb393"}, itemCor:"#9a7b5e"},
+   bg:`<svg viewBox="0 0 360 740" preserveAspectRatio="none"><defs><linearGradient id="a" x2="0" y2="1"><stop offset="0" stop-color="#f7f1e8"/><stop offset="1" stop-color="#e9dccb"/></linearGradient></defs><rect width="360" height="740" fill="url(#a)"/>
+   <path d="M70 520 L70 200 C70 120 290 120 290 200 L290 520 Z" fill="#fbf7f0"/><path d="M70 520 L70 200 C70 120 290 120 290 200 L290 520" fill="none" stroke="#e2d3bf" stroke-width="3"/>
+   <g fill="#cbb9a2" opacity=".35">${Array.from({length:9},(_,i)=>`<ellipse cx="${110+i*18}" cy="${210+(i%3)*30}" rx="7" ry="20" transform="rotate(${i*17-60} ${110+i*18} ${210+(i%3)*30})"/>`).join('')}</g>
+   <rect y="560" width="360" height="180" fill="#e3d4bf"/><path d="M300 560 L300 470" stroke="#bfa98b" stroke-width="2"/><rect x="286" y="500" width="28" height="60" rx="10" fill="#efe5d6"/>
+   <g fill="#e8dcc6">${[0,1,2,3,4].map(i=>`<ellipse cx="${300+(i-2)*9}" cy="${455-i%2*12}" rx="10" ry="26" transform="rotate(${(i-2)*14} ${300+(i-2)*9} 480)"/>`).join('')}</g></svg>`,
+   titulo:`<div style="font-family:'Instrument Serif';font-style:italic;font-size:30px;color:#8b6b52">o banco</div>`,
+   card:`background:rgba(255,252,247,.86);backdrop-filter:blur(8px);border-radius:22px;border:1px solid #e6d7c3`,
+   nf:`font-family:'Instrument Serif';font-size:24px`, subcor:"#a3876b", op:`border-radius:999px;border:1px solid #c9ad8c;background:#fffaf3`},
+ { nome:"Golden hour", sub:"cozy, quente, como a tua referência", sw:["#fbe3cc","#f4b98e","#e58e72","#d9879b","#6b4a3a"],
+   fig:{...base, batom:"#cf6f73", top:{tipo:"camisola",cor:"#f4c4c4"}, baixo:{tipo:"saia",cor:"#f3e6d6"}, itemCor:"#b5704a"},
+   bg:`<svg viewBox="0 0 360 740" preserveAspectRatio="none"><defs><linearGradient id="b" x2="0" y2="1"><stop offset="0" stop-color="#f6c9a6"/><stop offset="1" stop-color="#ee9f80"/></linearGradient><radialGradient id="l"><stop offset="0" stop-color="#ffe7b0" stop-opacity=".9"/><stop offset="1" stop-color="#ffe7b0" stop-opacity="0"/></radialGradient></defs>
+   <rect width="360" height="740" fill="url(#b)"/><path d="M0 0 L220 0 L360 420 L360 740 L130 740 Z" fill="#fff3d6" opacity=".22"/>
+   <rect x="20" y="150" width="200" height="10" rx="3" fill="#e9c08f"/>${[["#e8a3a8",30,60],["#f2d38a",52,72],["#a7b9d8",74,56],["#b7d1b0",96,66]].map(([c,x,h])=>`<rect x="${x}" y="${150-h}" width="20" height="${h}" rx="3" fill="${c}"/>`).join('')}
+   <rect x="160" y="96" width="50" height="54" rx="4" fill="#fff6ea"/><text x="185" y="128" text-anchor="middle" font-family="Caveat" font-size="15" fill="#d9879b">ok!</text>
+   <circle cx="300" cy="220" r="130" fill="url(#l)"/><path d="M300 150 L300 230" stroke="#f3dcc0" stroke-width="4"/><path d="M270 150 C275 125 325 125 330 150 Z" fill="#fde9cf"/>
+   <rect y="560" width="360" height="180" fill="#c98466"/><rect y="556" width="360" height="8" fill="#b9735a"/></svg>`,
+   titulo:`<div style="font-family:'Playfair Display';font-style:italic;font-size:28px;color:#fff8ee;text-shadow:0 2px 10px rgba(120,60,40,.35)">o banco</div>`,
+   card:`background:#fff6ec;border-radius:28px;box-shadow:0 12px 30px rgba(150,70,40,.25)`,
+   nf:`font-family:'Playfair Display';font-size:22px`, subcor:"#d9879b", op:`border-radius:16px;border:2px solid #f0b39c;background:#fff`},
+ { nome:"Coquette", sub:"soft girl, rosa, laços e pérolas", sw:["#fde8ec","#f6c6d0","#e89aac","#ffffff","#b5677a"],
+   fig:{...base, batom:"#e07f93", top:{tipo:"blusa",cor:"#fbe1e7"}, baixo:{tipo:"saia",cor:"#ffffff"}, sapatos:{cor:"#f2b5c2",salto:true}, itemCor:"#f2b5c2"},
+   bg:`<svg viewBox="0 0 360 740" preserveAspectRatio="none"><rect width="360" height="740" fill="#fde8ec"/>
+   ${Array.from({length:8},(_,i)=>`<rect x="${i*48}" y="0" width="24" height="560" fill="#fbdde4"/>`).join('')}
+   ${[[60,120],[300,90],[40,330],[320,300],[180,60]].map(([x,y])=>`<path d="M${x} ${y} c-10 -12 -26 -2 -16 12 l16 14 l16 -14 c10 -14 -6 -24 -16 -12 z" fill="#f6b8c6"/>`).join('')}
+   <g transform="translate(180 470)"><path d="M0 0 C-40 -30 -60 10 -40 20 C-20 30 -5 10 0 0 C5 10 20 30 40 20 C60 10 40 -30 0 0 Z" fill="#f2a7b8"/><circle r="8" fill="#e889a0"/></g>
+   <rect y="560" width="360" height="180" fill="#f6d3db"/>${Array.from({length:12},(_,i)=>`<circle cx="${15+i*30}" cy="560" r="5" fill="#fff"/>`).join('')}</svg>`,
+   titulo:`<div style="font-family:Caveat;font-size:38px;color:#d0738b">o banco ♡</div>`,
+   card:`background:#fffafb;border-radius:26px;border:2px dashed #f2a7b8`,
+   nf:`font-family:Caveat;font-size:30px;color:#c25f7a`, subcor:"#e089a0", op:`border-radius:999px;border:0;background:#fbe1e7;color:#8a4458`},
+ { nome:"Old money", sub:"riviera, creme, azul-marinho e dourado", sw:["#f7f2e7","#1f2d4a","#7d8a5b","#c8a45d","#e9dcc3"],
+   fig:{...base, batom:"#b5585e", top:{tipo:"blusa",cor:"#ffffff"}, baixo:{tipo:"saia",cor:"#1f2d4a"}, itemCor:"#6e3f22"},
+   bg:`<svg viewBox="0 0 360 740" preserveAspectRatio="none"><rect width="360" height="740" fill="#f7f2e7"/>
+   ${Array.from({length:9},(_,i)=>`<rect x="${i*40}" y="0" width="20" height="90" fill="#1f2d4a"/>`).join('')}<path d="M0 90 ${Array.from({length:18},(_,i)=>`Q${i*20+10} 110 ${i*20+20} 90`).join(' ')}" fill="#f7f2e7"/>
+   <rect x="40" y="160" width="120" height="160" rx="60" fill="#dfe7ee"/><rect x="40" y="160" width="120" height="160" rx="60" fill="none" stroke="#c8a45d" stroke-width="3"/>
+   <g transform="translate(290 470)"><rect x="-26" y="40" width="52" height="50" fill="#e9dcc3"/><circle cy="0" r="56" fill="#7d8a5b"/>${[[-20,-10],[18,-24],[10,18],[-28,22],[30,6]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="7" fill="#f2d14b"/>`).join('')}<rect x="-3" y="20" width="6" height="30" fill="#6b5a40"/></g>
+   <rect y="560" width="360" height="180" fill="#e9dcc3"/><path d="M0 600 L360 600 M0 650 L360 650 M0 700 L360 700" stroke="#d8c8a8"/></svg>`,
+   titulo:`<div style="margin-top:96px;font-family:'Playfair Display';letter-spacing:.3em;font-size:16px;color:#1f2d4a">O · B A N C O</div>`,
+   card:`background:#fbf8f1;border-radius:6px;outline:1px solid #1f2d4a;outline-offset:-6px;border:1px solid #1f2d4a`,
+   nf:`font-family:'Playfair Display';font-size:22px;color:#1f2d4a`, subcor:"#c8a45d", op:`border-radius:2px;border:1px solid #1f2d4a;background:#fff;color:#1f2d4a`},
+];
+const g = document.getElementById('g');
+for (const e of E) {
+  g.insertAdjacentHTML('beforeend', `<div class="col"><h2>${e.nome}</h2><div style="font-size:13px;margin-top:-10px">${e.sub}</div>
+  <div class="sw">${e.sw.map(c=>`<i style="background:${c}"></i>`).join('')}</div>
+  <div class="tel"><div class="bg">${e.bg}</div><div class="titulo">${e.titulo}</div><div class="fig">${figura(e.fig,{expr:'preocupada'})}</div>
+  <div class="card" style="${e.card}"><div class="n"><b style="font-weight:400;${e.nf}">Mariana</b><small style="color:${e.subcor};font-weight:600">29 anos · Bancária</small></div>
+  <p>Casei há três meses. Toda a gente pergunta: «E os filhos, para quando?»</p>
+  <div class="op" style="${e.op}">Maria: Isso pesa muito, não pesa?</div><div class="op" style="${e.op}">Maria: E tu, o que queres mesmo?</div></div></div></div>`);
+}
+</script></body></html>
