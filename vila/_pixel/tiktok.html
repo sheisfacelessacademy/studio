@@ -1,0 +1,99 @@
+<!doctype html><html lang="pt-PT"><head><meta charset="utf-8">
+<link rel="stylesheet" href="/css/fonts.css">
+<style>
+html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#1d1621}
+#v{position:relative;width:1080px;height:1920px;background:linear-gradient(#2a1f2e,#1d1621 40%,#2a1f2e);font-family:Inter,sans-serif}
+canvas{image-rendering:pixelated;position:absolute;display:block}
+#cena{left:0;top:470px;width:1080px;height:607px}
+#hook{position:absolute;top:150px;left:60px;right:60px;text-align:center;color:#fbf1e1}
+#hook small{display:block;font-weight:600;font-size:40px;color:#e8a3b4;letter-spacing:.08em;margin-bottom:12px}
+#hook div{font-family:"Instrument Serif",serif;font-size:96px;line-height:1.02}
+#caixa{position:absolute;left:50px;right:50px;top:1200px;height:330px;background:#fbf1e1;color:#4a2f25;
+ box-shadow:0 0 0 8px #4a2f25,0 0 0 16px #e8b4a0,0 0 0 24px #4a2f25;padding:34px 40px 30px 330px;box-sizing:border-box}
+#caixa b{font-family:"Instrument Serif",serif;font-weight:400;font-size:58px;color:#b5677a;display:block;line-height:1}
+#caixa p{margin:14px 0 0;font-size:40px;line-height:1.35;font-weight:600}
+#caixa.narr{padding-left:40px}#caixa.narr p{font-style:italic;font-weight:400;color:#6b5247}
+#retrato{left:80px;top:1150px;width:240px;height:240px;box-shadow:0 0 0 8px #4a2f25,0 0 0 16px #f4c9b8,0 0 0 24px #4a2f25}
+#rodape{position:absolute;bottom:150px;left:0;right:0;text-align:center;color:#e8a3b4;font-size:38px;font-weight:600}
+#fim{position:absolute;inset:0;display:grid;place-items:center;text-align:center;background:rgba(29,22,33,.86);color:#fbf1e1;opacity:0}
+#fim h1{font-family:"Instrument Serif",serif;font-weight:400;font-size:150px;margin:0;line-height:.95}
+#fim p{font-size:44px;margin:20px 0 0;color:#e8a3b4;font-weight:600}
+</style></head><body><div id="v">
+<div id="hook"><small>POV</small><div>és mãe, freelancer<br>e são 23h40</div></div>
+<canvas id="cena" width="192" height="108"></canvas>
+<div id="caixa"><b>Maria</b><p></p></div>
+<canvas id="retrato" width="40" height="40"></canvas>
+<div id="rodape">@sheisfacelessacademy</div>
+<div id="fim"><div><h1>Vila<br>She Is</h1><p>o jogo · em breve ✨</p></div></div>
+</div>
+<script>
+const P={H:'#2b1a14',h:'#4a2e22',S:'#d08b5b',s:'#a9653e',E:'#1a1010',W:'#fbf6ee',L:'#b8505a',T:'#efe2c8',t:'#cbb79a',J:'#4a6fa5',j:'#34507d',B:'#5a3424',G:'#e0b25a',K:'#8a5430'};
+const MARIA=[".....HHHHHH.....","....HHhhhhHH....","...HHhHHHHhHH...","...HHSSSSSSHH...","...HHSSSSSSHH...","...HHWESSWEHH...","...HHSSSSSSHH...","...HHSSLLSSHH...","...HHHSSSSHHH...","...HHH.SS.HHH...","..HHTTTGGTTTHH..",".HHTTTTTTTTTTHH.",".HHTtTTTTTTtTHH.",".HHTtTTTTTTtTHH.",".HHTtTTTTTTtTHH.","..HTtTTTTTTtTH..","...TtJJJJJJtT...","...SJJJJGJJJJS..","...KJJJJJJJJJS..","..KKJJJJJJJJJ...","..KKJJJJjJJJJ...","....JJJJ.JJJJ...","....JJJj.jJJJ...","...JJJJj.jJJJJ..","...JJJJj.jJJJJ..","...JJJJj.jJJJJ..","...JJJjj.jjJJJ..","...JJJJJ.JJJJJ..","...jjjjj.jjjjj..","...BBBB...BBBB..","................"];
+const bayer=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+const c=document.getElementById('cena').getContext('2d');
+const R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h)};
+function grad(x,y,w,h,a,b){for(let j=0;j<h;j++)for(let i=0;i<w;i++){const t=j/(h-1);R(x+i,y+j,1,1,t*16>bayer[j%4][i%4]+.5?b:a)}}
+function brilho(cx,cy,r,col,max){c.fillStyle=col;for(let y=cy-r;y<=cy+r;y++)for(let x=cx-r;x<=cx+r;x++){const d=Math.hypot(x-cx,y-cy)/r;if(d<1&&(1-d)*max*16>bayer[(y+16)&3][(x+16)&3])c.fillRect(x,y,1,1)}}
+const rnd=(n)=>{const x=Math.sin(n*12.9898)*43758.5453;return x-Math.floor(x)};
+function cena(t,pisca){
+  c.setTransform(1,0,0,1,0,0);grad(0,0,192,108,'#3d3247','#5b4656');c.translate(0,-12);
+  R(0,80,192,2,'#2e2533');grad(0,82,192,38,'#7a5a4a','#5e4438');
+  for(let y=86;y<120;y+=5)R(0,y,192,1,'#57402f');for(let i=0;i<14;i++)R((i*37)%192,82+(i%5)*5,1,5,'#57402f');
+  const pulso=.85+Math.sin(t*2)*.05;
+  brilho(110,48,44,'#5f4a59',.9*pulso);brilho(110,46,30,'#74585f',.8*pulso);brilho(94,40,14,'#9a7468',.7*pulso);
+  R(14,14,46,40,'#fdf3e3');grad(17,17,40,34,'#1a1f3a','#353a62');R(36,17,2,34,'#fdf3e3');R(17,33,40,2,'#fdf3e3');
+  R(48,21,4,4,'#fff1cc');R(50,20,3,3,'#1a1f3a');
+  [[19,8],[23,12],[28,7],[40,10],[45,13],[51,9]].forEach(([x,h],k)=>{R(x,51-h,4,h,'#262a4c');const on=rnd(k*7+Math.floor(t*1.5))>.25;R(x+1,51-h+2,1,1,on?'#ffd27a':'#3a3f66');if(h>9)R(x+2,51-h+5,1,1,rnd(k+Math.floor(t))>.5?'#ffd27a':'#3a3f66')});
+  [[22,20],[30,24],[44,19],[54,27],[26,29]].forEach(([x,y],k)=>R(x,y,1,1,rnd(k*3+Math.floor(t*3))>.3?'#e8e4ff':'#353a62'));
+  R(98,24,72,2,'#caa47c');R(98,26,72,1,'#8f6c4a');
+  [['#e8a3a8',100,10],['#a7b9d8',104,12],['#f2d38a',108,9],['#b7d1b0',112,11],['#d9b6e3',116,10]].forEach(([col,x,h])=>R(x,24-h,3,h,col));
+  R(150,13,14,11,'#fdf3e3');R(152,16,10,1,'#d9879b');R(152,19,8,1,'#7aa2c9');
+  R(100,62,76,3,'#d4ae86');R(100,65,76,1,'#a9845e');R(103,66,3,16,'#b8936c');R(170,66,3,16,'#b8936c');
+  R(118,42,32,19,'#e8e2da');R(120,44,28,14,'#fff8ee');R(132,61,4,1,'#cfc8bf');R(128,60,12,1,'#cfc8bf');
+  if(Math.floor(t*2)%2)R(141,50,1,4,'#d9879b');
+  c.fillStyle='#d9879b';[[124,49],[125,48],[126,48],[127,49],[126,50],[125,50],[130,47],[130,48],[130,49],[130,50],[133,49],[134,48],[135,48],[136,49],[136,50],[134,50],[135,50],[135,46]].forEach(([x,y])=>c.fillRect(x,y,1,1));
+  R(122,63,24,1,'#f4efe8');R(150,58,5,4,'#f2d4dc');R(151,57,3,1,'#c96b7a');
+  for(let k=0;k<3;k++){const yy=55-((t*6+k*4)%10);R(152+Math.round(Math.sin(t*3+k)),yy,1,1,'#e8dde0')}
+  R(94,36,1,26,'#ead8c4');R(89,33,9,4,'#f6e2c8');R(90,37,7,1,'#ffe9b8');
+  R(178,70,9,10,'#c9845a');[[176,62],[179,58],[183,60],[186,64],[181,55],[174,66]].forEach(([x,y],k)=>{const dx=Math.round(Math.sin(t*1.5+k)*.6);R(x+dx,y,3,7,'#5f8f52');R(x+1+dx,y,1,6,'#6fa35e')});
+  R(60,92,70,8,'#c96b7a');R(62,94,66,4,'#e09aa6');for(let x=64;x<126;x+=4)R(x,95,2,2,'#f6d6c8');
+  R(80,90,18,2,'#4a3428');
+  const resp=Math.floor(t*1.2)%2;
+  MARIA.forEach((row,j)=>[...row].forEach((ch,i)=>{let col=P[ch];if(!col)return;if(pisca&&(ch==='W'||ch==='E'))col=P.S;R(81+i,59+j+(j<17?resp:0),1,1,col)}));
+}
+const r=document.getElementById('retrato').getContext('2d');
+const p=(x,y,col)=>{r.fillStyle=col;r.fillRect(x,y,1,1)};const pr=(x,y,w,h,col)=>{r.fillStyle=col;r.fillRect(x,y,w,h)};
+function retrato(pisca,triste){
+  for(let y=0;y<40;y++)for(let x=0;x<40;x++)p(x,y,(y/39)*16>bayer[y&3][x&3]+.5?'#e8a8a0':'#f4c9b8');
+  r.fillStyle='#2b1a14';r.beginPath();r.ellipse(20,15,13,12,0,0,7);r.fill();pr(7,15,26,25,'#2b1a14');
+  r.fillStyle='#efe2c8';r.beginPath();r.ellipse(20,40,16,8,0,0,7);r.fill();pr(10,34,20,6,'#efe2c8');
+  pr(17,28,6,6,'#d08b5b');pr(17,31,6,1,'#a9653e');pr(16,34,8,1,'#cbb79a');p(20,35,'#e0b25a');p(19,34,'#e0b25a');p(21,34,'#e0b25a');
+  r.fillStyle='#d08b5b';r.beginPath();r.ellipse(20,19,8,10,0,0,7);r.fill();pr(12,20,1,4,'#a9653e');pr(27,20,1,4,'#a9653e');
+  r.fillStyle='#2b1a14';r.beginPath();r.moveTo(20,6);r.lineTo(9,14);r.lineTo(10,30);r.lineTo(13,30);r.lineTo(13,15);r.lineTo(20,9);r.lineTo(27,15);r.lineTo(27,30);r.lineTo(30,30);r.lineTo(31,14);r.closePath();r.fill();
+  [[17,7],[15,9],[13,11],[23,7],[25,9],[27,11],[11,18],[11,23],[29,18],[29,23]].forEach(([x,y])=>p(x,y,'#4a2e22'));
+  for(const ex of [14,22]){
+    if(pisca){pr(ex,19,4,1,'#1a1010')}else{pr(ex,18,4,3,'#fbf6ee');pr(ex+1,18,2,3,'#3a2016');p(ex+1,18,'#fbf6ee');pr(ex,17,4,1,'#1a1010');p(ex+(ex<20?-1:4),16,'#1a1010')}
+  }
+  if(triste){p(14,14,'#2b1a14');p(15,14,'#2b1a14');pr(16,15,2,1,'#2b1a14');pr(22,15,2,1,'#2b1a14');p(24,14,'#2b1a14');p(25,14,'#2b1a14')}else{pr(14,15,4,1,'#2b1a14');pr(22,15,4,1,'#2b1a14')}
+  p(20,22,'#a9653e');p(19,23,'#a9653e');
+  if(triste){pr(18,26,4,1,'#b8505a');p(17,27,'#b8505a');p(22,27,'#b8505a')}else{pr(18,25,4,1,'#b8505a');pr(19,26,2,1,'#d06a72');p(20,25,'#d87a82')}
+  pr(13,22,2,1,'#e0807a');pr(25,22,2,1,'#e0807a');p(11,24,'#e0b25a');p(28,24,'#e0b25a');
+}
+const FALAS=[
+  {a:1.0,b:5.4,quem:'Maria',triste:false,t:'Mais um projeto entregue. O Gui já está a dormir... outra vez.'},
+  {a:5.4,b:9.4,quem:'Maria',triste:true,t:'Onze anos. Às vezes sinto que o vejo crescer em fotografias.'},
+  {a:9.4,b:12.4,quem:'',triste:true,t:'Até que uma notícia no telemóvel mudou tudo...'},
+];
+const caixa=document.getElementById('caixa'),txt=caixa.querySelector('p'),nome=caixa.querySelector('b'),ret=document.getElementById('retrato');
+window.render=function(t){
+  const pisca=(t%3.4)>3.25;
+  cena(t,pisca);
+  const f=FALAS.find(x=>t>=x.a&&t<x.b)||(t<1?FALAS[0]:FALAS[FALAS.length-1]);
+  retrato(pisca,f.triste);
+  caixa.className=f.quem?'':'narr';nome.style.display=f.quem?'':'none';ret.style.display=f.quem?'':'none';nome.textContent=f.quem;
+  const n=t<f.a?0:Math.floor((t-f.a)*32);txt.textContent=f.t.slice(0,n);
+  document.getElementById('hook').style.opacity=Math.min(1,t/0.6);
+  document.getElementById('fim').style.opacity=Math.max(0,Math.min(1,(t-12.4)/0.6));
+};
+window.render(0);
+</script></body></html>
