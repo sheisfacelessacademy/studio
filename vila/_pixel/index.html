@@ -1,0 +1,93 @@
+<!doctype html><html lang="pt-PT"><head><meta charset="utf-8">
+<link rel="stylesheet" href="/css/fonts.css">
+<style>
+body{margin:0;background:#1d1621;display:grid;place-items:center;min-height:100vh}
+#ecra{position:relative;width:960px;height:540px;overflow:hidden}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+#cena{width:960px;height:540px}
+#caixa{position:absolute;left:24px;right:24px;bottom:20px;height:100px;background:#fbf1e1;color:#4a2f25;
+ box-shadow:0 0 0 5px #4a2f25,0 0 0 10px #e8b4a0,0 0 0 15px #4a2f25;padding:12px 22px 12px 210px;font-family:Inter,sans-serif}
+#caixa b{font-family:"Instrument Serif",serif;font-weight:400;font-size:26px;display:block;margin-bottom:2px;color:#b5677a}
+#caixa p{margin:0;font-size:17px;line-height:1.4;font-weight:600}
+#retrato{position:absolute;left:34px;bottom:26px;width:180px;height:180px;box-shadow:0 0 0 5px #4a2f25,0 0 0 10px #f4c9b8,0 0 0 15px #4a2f25}
+.seta{position:absolute;right:20px;bottom:12px;color:#d9879b;font-size:18px}
+</style></head><body>
+<div id="ecra"><canvas id="cena" width="192" height="108"></canvas>
+<div id="caixa"><b>Maria</b><p>Onze anos. Às vezes sinto que vejo o Gui crescer em fotografias...</p><span class="seta">▼</span></div>
+<canvas id="retrato" width="40" height="40"></canvas></div>
+<script>
+const P = {'.':null,H:'#2b1a14',h:'#4a2e22',S:'#d08b5b',s:'#a9653e',E:'#1a1010',W:'#fbf6ee',L:'#b8505a',T:'#efe2c8',t:'#cbb79a',J:'#4a6fa5',j:'#34507d',B:'#5a3424',G:'#e0b25a',K:'#8a5430'};
+const MARIA = [
+".....HHHHHH.....","....HHhhhhHH....","...HHhHHHHhHH...","...HHSSSSSSHH...","...HHSSSSSSHH...",
+"...HHWESSWEHH...","...HHSSSSSSHH...","...HHSSLLSSHH...","...HHHSSSSHHH...","...HHH.SS.HHH...",
+"..HHTTTGGTTTHH..",".HHTTTTTTTTTTHH.",".HHTtTTTTTTtTHH.",".HHTtTTTTTTtTHH.",".HHTtTTTTTTtTHH.",
+"..HTtTTTTTTtTH..","...TtJJJJJJtT...","...SJJJJGJJJJS..","...KJJJJJJJJJS..","..KKJJJJJJJJJ...",
+"..KKJJJJjJJJJ...","....JJJJ.JJJJ...","....JJJj.jJJJ...","...JJJJj.jJJJJ..","...JJJJj.jJJJJ..",
+"...JJJJj.jJJJJ..","...JJJjj.jjJJJ..","...JJJJJ.JJJJJ..","...jjjjj.jjjjj..","...BBBB...BBBB..","................"];
+const c = document.getElementById('cena').getContext('2d');
+const R = (x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h)};
+const bayer=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+// gradiente com pontilhado (dithering) entre duas cores
+function grad(x,y,w,h,a,b){for(let j=0;j<h;j++)for(let i=0;i<w;i++){const t=j/(h-1);R(x+i,y+j,1,1,t*16>bayer[j%4][i%4]+.5?b:a)}}
+function brilho(cx,cy,r,col,max){c.fillStyle=col;for(let y=cy-r;y<=cy+r;y++)for(let x=cx-r;x<=cx+r;x++){const d=Math.hypot(x-cx,y-cy)/r;if(d<1&&(1-d)*max*16>bayer[y&3][x&3])c.fillRect(x,y,1,1)}}
+// parede e chão
+grad(0,0,192,108,'#3d3247','#5b4656');
+c.translate(0,-12);
+R(0,80,192,2,'#2e2533');grad(0,82,192,38,'#7a5a4a','#5e4438');
+for(let y=86;y<120;y+=5)R(0,y,192,1,'#57402f');for(let i=0;i<14;i++)R((i*37)%192,82+(i%5)*5,1,5,'#57402f');
+// luz quente do candeeiro (antes dos objetos)
+brilho(110,48,44,'#5f4a59',.9);brilho(110,46,30,'#74585f',.8);brilho(94,40,14,'#9a7468',.7);
+// janela com noite de Lisboa
+R(14,14,46,40,'#fdf3e3');grad(17,17,40,34,'#1a1f3a','#353a62');
+R(36,17,2,34,'#fdf3e3');R(17,33,40,2,'#fdf3e3');
+R(48,21,4,4,'#fff1cc');R(50,20,3,3,'#1a1f3a');
+for(const [x,h] of [[19,8],[23,12],[28,7],[40,10],[45,13],[51,9]]){R(x,51-h,4,h,'#262a4c');R(x+1,51-h+2,1,1,'#ffd27a')}
+for(const [x,y] of [[22,20],[30,24],[44,19],[54,27]])R(x,y,1,1,'#e8e4ff');
+// estante com livros pastel
+R(98,24,72,2,'#caa47c');R(98,26,72,1,'#8f6c4a');
+[['#e8a3a8',100,10],['#a7b9d8',104,12],['#f2d38a',108,9],['#b7d1b0',112,11],['#d9b6e3',116,10]].forEach(([col,x,h])=>R(x,24-h,3,h,col));
+R(150,13,14,11,'#fdf3e3');R(152,16,10,1,'#d9879b');R(152,19,8,1,'#7aa2c9');
+// luz do candeeiro e do ecrã
+
+// secretária, ecrã e candeeiro
+R(100,62,76,3,'#d4ae86');R(100,65,76,1,'#a9845e');R(103,66,3,16,'#b8936c');R(170,66,3,16,'#b8936c');
+R(118,42,32,19,'#e8e2da');R(120,44,28,14,'#fff8ee');R(132,61,4,1,'#cfc8bf');R(128,60,12,1,'#cfc8bf');
+// "olá" no ecrã
+c.fillStyle='#d9879b';[[124,49],[125,48],[126,48],[127,49],[126,50],[125,50],[130,47],[130,48],[130,49],[130,50],[133,49],[134,48],[135,48],[136,49],[136,50],[134,50],[135,50],[135,46]].forEach(([x,y])=>c.fillRect(x,y,1,1));
+R(122,63,24,1,'#f4efe8');R(150,58,5,4,'#f2d4dc');R(151,57,3,1,'#c96b7a');
+R(94,36,1,26,'#ead8c4');R(89,33,9,4,'#f6e2c8');R(90,37,7,1,'#ffe9b8');
+// planta e tapete
+R(178,70,9,10,'#c9845a');[[176,62],[179,58],[183,60],[186,64],[181,55],[174,66]].forEach(([x,y])=>{R(x,y,3,7,'#5f8f52');R(x+1,y,1,6,'#6fa35e')});
+R(60,92,70,8,'#c96b7a');R(62,94,66,4,'#e09aa6');for(let x=64;x<126;x+=4)R(x,95,2,2,'#f6d6c8');
+// Maria
+function sprite(m,x,y,pisca){m.forEach((row,j)=>[...row].forEach((ch,i)=>{let col=P[ch];if(pisca&&(ch==='W'||ch==='E'))col=P.S;if(col)R(x+i,y+j,1,1,col)}))}
+R(80,90,18,2,'#4a3428');
+sprite(MARIA,81,59,false);
+// retrato 40x40: formas desenhadas em baixa resolução
+const r=document.getElementById('retrato').getContext('2d');
+const p=(x,y,col)=>{r.fillStyle=col;r.fillRect(x,y,1,1)};
+const pr=(x,y,w,h,col)=>{r.fillStyle=col;r.fillRect(x,y,w,h)};
+// fundo
+for(let y=0;y<40;y++)for(let x=0;x<40;x++)p(x,y,(y/39)*16>bayer[y&3][x&3]+.5?'#e8a8a0':'#f4c9b8');
+// cabelo de trás
+r.fillStyle='#2b1a14';r.beginPath();r.ellipse(20,15,13,12,0,0,7);r.fill();pr(7,15,26,25,'#2b1a14');
+// ombros e top
+r.fillStyle='#efe2c8';r.beginPath();r.ellipse(20,40,16,8,0,0,7);r.fill();pr(10,34,20,6,'#efe2c8');
+pr(17,28,6,6,'#d08b5b');pr(17,31,6,1,'#a9653e');
+pr(16,34,8,1,'#cbb79a');p(20,35,'#e0b25a');p(19,34,'#e0b25a');p(21,34,'#e0b25a');
+// rosto
+r.fillStyle='#d08b5b';r.beginPath();r.ellipse(20,19,8,10,0,0,7);r.fill();
+for(let y=10;y<30;y++)for(let x=11;x<30;x++){const d=r.getImageData(x,y,1,1).data;}
+pr(12,20,1,4,'#a9653e');pr(27,20,1,4,'#a9653e');
+// cabelo da frente (risca ao meio)
+r.fillStyle='#2b1a14';r.beginPath();r.moveTo(20,6);r.lineTo(9,14);r.lineTo(10,30);r.lineTo(13,30);r.lineTo(13,15);r.lineTo(20,9);r.lineTo(27,15);r.lineTo(27,30);r.lineTo(30,30);r.lineTo(31,14);r.closePath();r.fill();
+[[17,7],[15,9],[13,11],[23,7],[25,9],[27,11],[11,18],[11,23],[29,18],[29,23]].forEach(([x,y])=>p(x,y,'#4a2e22'));
+// olhos grandes
+for(const ex of [14,22]){pr(ex,18,4,3,'#fbf6ee');pr(ex+1,18,2,3,'#3a2016');p(ex+1,18,'#fbf6ee');pr(ex,17,4,1,'#1a1010');p(ex+(ex<20?-1:4),16,'#1a1010')}
+pr(14,15,4,1,'#2b1a14');pr(22,15,4,1,'#2b1a14');
+// nariz, boca, blush, brinco
+p(20,22,'#a9653e');p(19,23,'#a9653e');pr(18,25,4,1,'#b8505a');pr(19,26,2,1,'#d06a72');p(20,25,'#d87a82');
+pr(13,22,2,1,'#e0807a');pr(25,22,2,1,'#e0807a');
+p(11,24,'#e0b25a');p(28,24,'#e0b25a');
+// contorno: escurece píxeis do retrato que tocam no fundo
+</script></body></html>
